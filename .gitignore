@@ -4,6 +4,8 @@ __pycache__/
 *.pyc
 models/*.pkl
 models/*.joblib
-data/raw/*
-data/processed/*
+# Datasets
+data/raw/
+data/processed/
+
 data/external/*
