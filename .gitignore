@@ -1,11 +1,25 @@
+# Python
 .venv/
-.env
 __pycache__/
-*.pyc
-models/*.pkl
-models/*.joblib
-# Datasets
-data/raw/
-data/processed/
+*.py[cod]
 
-data/external/*
+
+# Environment / Secrets
+.env
+
+# ADK Runtime
+src/agent/.adk/
+*.db
+
+
+# Large Raw Dataset
+data/raw/zomato.csv
+
+# Large ML Model
+models/zomato_performance_model.pkl
+
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
