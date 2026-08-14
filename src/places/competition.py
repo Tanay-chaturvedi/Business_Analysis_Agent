@@ -103,7 +103,114 @@ def validate_business_type(
 
     return business_type
 
+# ============================================================
+# GOOGLE PLACES — LOCATION RESOLUTION
+# ============================================================
 
+def resolve_location_coordinates(
+    location: str
+) -> tuple[float, float]:
+    """
+    Resolve a human-readable location into
+    latitude and longitude using Google Places Text Search.
+
+    Example:
+        "Brookfield, Bengaluru"
+        "Indiranagar, Bengaluru"
+        "Whitefield, Bengaluru"
+    """
+
+    if not google_maps_key:
+        raise ValueError(
+            "GOOGLE_MAPS_API_KEY not found in .env"
+        )
+
+    if not isinstance(location, str):
+        raise TypeError(
+            "location must be a string."
+        )
+
+    location = location.strip()
+
+    if not location:
+        raise ValueError(
+            "location cannot be empty."
+        )
+
+    url = (
+        "https://places.googleapis.com/v1/"
+        "places:searchText"
+    )
+
+    headers = {
+        "Content-Type": "application/json",
+
+        "X-Goog-Api-Key": (
+            google_maps_key
+        ),
+
+        "X-Goog-FieldMask": (
+            "places.id,"
+            "places.displayName,"
+            "places.formattedAddress,"
+            "places.location"
+        )
+    }
+
+    payload = {
+        "textQuery": location,
+        "maxResultCount": 1
+    }
+
+    response = requests.post(
+        url,
+        headers=headers,
+        json=payload
+    )
+
+    if response.status_code != 200:
+        raise Exception(
+            f"Places location resolution error "
+            f"{response.status_code}: "
+            f"{response.text}"
+        )
+
+    data = response.json()
+
+    places = data.get(
+        "places",
+        []
+    )
+
+    if not places:
+        raise ValueError(
+            f"Could not resolve location "
+            f"'{location}' using Google Places."
+        )
+
+    coordinates = places[0].get(
+        "location",
+        {}
+    )
+
+    latitude = coordinates.get(
+        "latitude"
+    )
+
+    longitude = coordinates.get(
+        "longitude"
+    )
+
+    if latitude is None or longitude is None:
+        raise ValueError(
+            f"Google Places returned no coordinates "
+            f"for location '{location}'."
+        )
+
+    return (
+        float(latitude),
+        float(longitude)
+    )
 # ============================================================
 # GOOGLE PLACES — NEARBY SEARCH
 # ============================================================
