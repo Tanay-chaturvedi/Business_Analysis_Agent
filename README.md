@@ -29,7 +29,7 @@ The AI agent collects the required business information, automatically resolves 
 
 ## How It Works
 
-```text
+~~~text
                      USER
                        |
                        v
@@ -94,57 +94,68 @@ The AI agent collects the required business information, automatically resolves 
                        |
                        v
               Final Business Report
+~~~
 
-Role of Gemini ADK
+---
 
-Gemini ADK acts as the AI orchestration and conversational layer.
+## Role of Gemini ADK
+
+Gemini ADK acts as the **AI orchestration and conversational layer**.
 
 It is responsible for:
 
-Understanding the user's business idea.
-Identifying the appropriate business category.
-Collecting missing business information.
-Creating the Google Places search query.
-Calling the Python business analysis tool.
-Explaining the analytical results.
-Providing practical recommendations.
+1. Understanding the user's business idea.
+2. Identifying the appropriate business category.
+3. Collecting missing business information.
+4. Creating the Google Places search query.
+5. Calling the Python business analysis tool.
+6. Explaining the analytical results.
+7. Providing practical recommendations.
 
-Gemini does not perform the core numerical analysis itself.
+Gemini does **not** perform the core numerical analysis itself.
 
 The Python analysis pipeline is the source of truth for:
 
-ML predictions
-Competitor counts
-Ratings
-Review counts
-Competition scores
-Opportunity scores
+- ML predictions
+- Competitor counts
+- Ratings
+- Review counts
+- Competition scores
+- Opportunity scores
 
 This separation makes the system more reliable and reproducible.
 
-Machine Learning
+---
 
-The project uses a Random Forest classifier trained on historical Zomato data.
+## Machine Learning
+
+The project uses a **Random Forest classifier** trained on historical Zomato data.
 
 The model predicts a historical business performance class:
 
+~~~text
 Low
 Medium
 High
+~~~
 
 The model also provides class probabilities.
 
 For example:
 
+~~~text
 High:   15.84%
 Medium: 50.48%
 Low:    33.68%
+~~~
 
 These probabilities represent the model's estimated class probabilities based on historical patterns.
 
-They should not be interpreted as guaranteed real-world business success probabilities.
+They should **not** be interpreted as guaranteed real-world business success probabilities.
 
-ML Pipeline
+### ML Pipeline
+
+~~~text
 Historical Zomato Dataset
           |
           v
@@ -165,37 +176,47 @@ Historical Zomato Dataset
           v
  Performance Class
  Low / Medium / High
-Model Files
+~~~
+
+### Model Files
+
+~~~text
 models/
 ├── zomato_performance_model.pkl
 └── zomato_preprocessor.pkl
+~~~
 
-zomato_performance_model.pkl
+**zomato_performance_model.pkl**
 
 Contains the trained Random Forest model.
 
-zomato_preprocessor.pkl
+**zomato_preprocessor.pkl**
 
 Contains the preprocessing pipeline used to transform input features before prediction.
 
-Model Performance
+---
 
-The baseline Random Forest model achieved approximately 87% test accuracy.
+## Model Performance
+
+The baseline Random Forest model achieved approximately **87% test accuracy**.
 
 Model selection is based on actual evaluation performance rather than assuming that a particular algorithm is always superior.
 
 XGBoost was also evaluated as an alternative model, but Random Forest performed better on the current dataset.
 
-Automatic Location Resolution
+---
+
+## Automatic Location Resolution
 
 Users do not need to provide latitude and longitude.
 
 For example:
 
-I want to open a bakery in Indiranagar, Bengaluru.
+> I want to open a bakery in Indiranagar, Bengaluru.
 
 The system automatically converts the location into coordinates using Google Places.
 
+~~~text
 Indiranagar, Bengaluru
           |
           v
@@ -203,31 +224,36 @@ Indiranagar, Bengaluru
           |
           v
 Latitude + Longitude
+~~~
 
 This allows the system to work with different locations without hardcoding coordinates.
 
 Examples:
 
-Whitefield, Bengaluru
-Brookfield, Bengaluru
-Indiranagar, Bengaluru
-Koramangala, Bengaluru
-Google Places Competition Analysis
+- Whitefield, Bengaluru
+- Brookfield, Bengaluru
+- Indiranagar, Bengaluru
+- Koramangala, Bengaluru
+
+---
+
+## Google Places Competition Analysis
 
 The system uses the Google Places API to discover nearby businesses.
 
 For each candidate business, information such as the following can be retrieved:
 
-Business name
-Rating
-Review count
-Address
-Business types
-Location
-Place ID
+- Business name
+- Rating
+- Review count
+- Address
+- Business types
+- Location
+- Place ID
 
 The system then applies Python-based relevance filtering.
 
+~~~text
 Google Places Candidates
           |
           v
@@ -238,71 +264,78 @@ Relevant Competitors
        /       \
       /         \
  Direct       Indirect
+~~~
 
 This prevents unrelated businesses from being treated as competitors.
 
-Competition Analysis
+---
+
+## Competition Analysis
 
 The system calculates competition statistics from the relevant competitors.
 
 Examples include:
 
-Number of competitors
-Average competitor rating
-Median competitor rating
-Average review count
-Median review count
-Direct competitor count
-Indirect competitor count
+- Number of competitors
+- Average competitor rating
+- Median competitor rating
+- Average review count
+- Median review count
+- Direct competitor count
+- Indirect competitor count
 
 A competition strength score is also calculated by the Python analysis engine.
 
+---
 
-
-Opportunity Analysis
+## Opportunity Analysis
 
 The system combines historical business performance and competition signals to produce an overall opportunity assessment.
 
 Example:
 
+~~~text
 Opportunity Score: 33.76
 Opportunity Class: Low
 
-
 Historical Performance: 41.08
 Competition Strength: 77.21
+~~~
 
 The Python analysis engine calculates these values.
 
 Gemini only explains the returned results.
 
-End-to-End Example
+---
+
+## End-to-End Example
 
 Suppose the user enters:
 
-I want to open a bakery in Indiranagar, Bengaluru.
+> I want to open a bakery in Indiranagar, Bengaluru.
 
 The agent collects:
 
+~~~text
 Business:
 Bakery
-
 
 Cuisine:
 Bakery
 
-
 Cost for two:
 ₹300
-
 
 Online ordering:
 Yes
 
-
 Table booking:
 No
-Step 1 — Location
+~~~
+
+### Step 1 — Location
+
+~~~text
 Indiranagar, Bengaluru
         |
         v
@@ -310,23 +343,27 @@ Google Places
         |
         v
 Latitude + Longitude
-Step 2 — Historical Location Analysis
+~~~
+
+### Step 2 — Historical Location Analysis
 
 The system retrieves historical location-level features from the processed Zomato dataset.
 
-Step 3 — ML Prediction
+### Step 3 — ML Prediction
 
 The Random Forest model predicts the historical performance class.
 
 Example:
 
+~~~text
 High:   15.84%
 Medium: 50.48%
 Low:    33.68%
 
-
 Prediction: Medium
-Step 4 — Competition
+~~~
+
+### Step 4 — Competition
 
 Google Places discovers nearby businesses.
 
@@ -334,100 +371,283 @@ The Python pipeline filters them and identifies relevant competitors.
 
 Example:
 
+~~~text
 20 relevant competitors
-
 
 19 Direct
 1 Indirect
-Step 5 — Competition Statistics
+~~~
+
+### Step 5 — Competition Statistics
 
 The system calculates:
 
+~~~text
 Average Rating: 4.495
 Median Rating: 4.45
 Average Reviews: 2155.75
 Median Reviews: 404.5
-Step 6 — Opportunity
+~~~
+
+### Step 6 — Opportunity
 
 The Python scoring system produces:
 
+~~~text
 Opportunity Score: 33.76
 Opportunity Class: Low
-Step 7 — Gemini Explanation
+~~~
+
+### Step 7 — Gemini Explanation
 
 Gemini converts the structured results into a readable business report containing:
 
-Business summary
-ML prediction
-Location context
-Competition
-Top competitors
-Opportunity score
-Risks
-Advantages
-Recommendations
+- Business summary
+- ML prediction
+- Location context
+- Competition
+- Top competitors
+- Opportunity score
+- Risks
+- Advantages
+- Recommendations
 
+---
 
-Setup
-1. Clone the repository
+## Project Architecture
+
+~~~text
+Business_Analysis_Agent/
+│
+├── data/
+│   ├── raw/
+│   │   └── zomato.csv
+│   │
+│   └── processed/
+│       ├── zomato_cleaned.csv
+│       ├── zomato_train_engineered.csv
+│       └── zomato_test_engineered.csv
+│
+├── models/
+│   ├── zomato_performance_model.pkl
+│   └── zomato_preprocessor.pkl
+│
+├── notebooks/
+│   ├── 01_zomato_exploration.ipynb
+│   ├── 02_zomato_cleaning.ipynb
+│   ├── 03_zomato_eda.ipynb
+│   ├── 04_zomato_feature_engineering.ipynb
+│   ├── 05_zomato_model_training.ipynb
+│   └── 06_google_places_competition.ipynb
+│
+├── src/
+│   ├── agent/
+│   │   ├── __init__.py
+│   │   └── agent.py
+│   │
+│   ├── analysis/
+│   │   ├── __init__.py
+│   │   ├── business_analyzer.py
+│   │   ├── location_context.py
+│   │   └── opportunity.py
+│   │
+│   ├── ml/
+│   │   ├── __init__.py
+│   │   └── predictor.py
+│   │
+│   └── places/
+│       ├── __init__.py
+│       └── competition.py
+│
+├── .env
+├── .gitignore
+├── requirements.txt
+└── README.md
+~~~
+
+---
+
+## Tech Stack
+
+### AI / Agent
+
+- Google ADK
+- Gemini
+
+### Machine Learning
+
+- Python
+- Pandas
+- NumPy
+- Scikit-learn
+- Random Forest
+
+### Data
+
+- Historical Zomato dataset
+- Engineered location-level features
+
+### Live Data
+
+- Google Places API
+
+### Development
+
+- Python
+- Git
+- GitHub
+- VS Code
+
+---
+
+## Setup
+
+### 1. Clone the repository
+
+~~~bash
 git clone <your-repository-url>
 cd Business_Analysis_Agent
-2. Create a virtual environment
+~~~
+
+### 2. Create a virtual environment
+
+~~~bash
 python -m venv .venv
+~~~
 
 Activate it on Windows:
 
+~~~powershell
 .venv\Scripts\Activate.ps1
-3. Install dependencies
+~~~
+
+### 3. Install dependencies
+
+~~~bash
 pip install -r requirements.txt
-4. Configure environment variables
+~~~
 
-Create a .env file in the project root:
+### 4. Configure environment variables
 
+Create a `.env` file in the project root:
+
+~~~env
 GOOGLE_MAPS_API_KEY=your_google_places_api_key
 GOOGLE_API_KEY=your_gemini_api_key
+~~~
 
-Do not commit .env to GitHub.
+Do not commit `.env` to GitHub.
 
-Running the Agent
+---
+
+## Running the Agent
 
 Set the project root as the Python path.
 
-PowerShell
+### PowerShell
+
+~~~powershell
 $env:PYTHONPATH = (Get-Location).Path
+~~~
 
 Start the ADK application:
 
+~~~powershell
 adk web src
+~~~
 
 Then open the ADK interface and provide a business idea.
 
+Example:
 
+> I want to open a bakery in Indiranagar, Bengaluru.
 
-Limitations
+The agent will ask for the remaining required business information and run the complete analysis.
 
-The system should be treated as a decision-support tool, not a guaranteed business forecasting system.
+---
+
+## Security
+
+The following files should not be committed:
+
+~~~text
+.env
+.venv/
+*.pkl
+data/raw/
+data/processed/
+__pycache__/
+~~~
+
+API keys should always be stored in environment variables.
+
+---
+
+## Limitations
+
+The system should be treated as a **decision-support tool**, not a guaranteed business forecasting system.
 
 Limitations include:
 
-Historical Zomato data may not represent current market conditions.
-Google Places results depend on live API availability and search results.
-Competitor relevance depends on available business types and filtering logic.
-ML predictions reflect patterns in the training dataset.
-Opportunity scores are analytical indicators and are not guarantees of profitability.
-Actual business success also depends on factors outside the system, such as rent, location visibility, operations, marketing, product quality, and execution.
-Future Improvements
+- Historical Zomato data may not represent current market conditions.
+- Google Places results depend on live API availability and search results.
+- Competitor relevance depends on available business types and filtering logic.
+- ML predictions reflect patterns in the training dataset.
+- Opportunity scores are analytical indicators and are not guarantees of profitability.
+- Actual business success also depends on factors outside the system, such as rent, location visibility, operations, marketing, product quality, and execution.
+
+---
+
+## Future Improvements
 
 Potential future improvements include:
 
-Web-based business analysis dashboard
-More extensive feature engineering
-Hyperparameter tuning
-Cross-validation
-Model comparison
-Competitor distance analysis
-Competitor price-level analysis
-Historical trend analysis
-More detailed location intelligence
-Automated business report generation
-Visualization of competition density
+- Web-based business analysis dashboard
+- More extensive feature engineering
+- Hyperparameter tuning
+- Cross-validation
+- Model comparison
+- Competitor distance analysis
+- Competitor price-level analysis
+- Historical trend analysis
+- More detailed location intelligence
+- Automated business report generation
+- Visualization of competition density
+
+---
+
+## Project Objective
+
+The goal of this project is not to guarantee whether a business will succeed.
+
+Instead, it provides a **data-driven decision-support system** that combines:
+
+~~~text
+Historical Business Data
+        +
+Machine Learning
+        +
+Live Competition Data
+        +
+AI-powered Explanation
+~~~
+
+to help users evaluate potential food and restaurant business opportunities.
+
+---
+
+## Key Design Principle
+
+The core architecture separates **AI orchestration** from **numerical analysis**:
+
+> **Gemini understands and orchestrates. Python calculates. Google Places provides live competition data. Machine Learning provides historical performance predictions.**
+
+This makes the system more reliable because the LLM is not responsible for inventing or calculating analytical numbers.
+
+---
+
+## Author
+
+**Tanay Chaturvedi**
+
+AI / Machine Learning / Data Analytics Project
