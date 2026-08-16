@@ -9,10 +9,8 @@ from src.places.competition import (
 )
 
 
-# ============================================================
-# BUSINESS ANALYSIS TOOL
-# ============================================================
 
+# BUSINESS ANALYSIS TOOL
 def business_analysis_tool(
     location: str,
     business_type: str,
@@ -47,18 +45,16 @@ def business_analysis_tool(
     using Google Places.
     """
 
-    # ========================================================
+
     # AUTOMATIC LOCATION RESOLUTION
-    # ========================================================
+   
 
     if latitude is None or longitude is None:
         latitude, longitude = resolve_location_coordinates(
             location
         )
 
-    # ========================================================
-    # BUSINESS ANALYSIS
-    # ========================================================
+ #Business Analysis
 
     return analyze_business(
 
@@ -95,9 +91,8 @@ def business_analysis_tool(
     )
 
 
-# ============================================================
+
 # ROOT AGENT
-# ============================================================
 
 root_agent = Agent(
 
