@@ -1,19 +1,19 @@
-from src.ml.predictor import predict_business_performance
+from src.ml.predictor import predict_business_performance  #this imports a fucntion predict_business_performance() from predictor.py.
 
 from src.places.competition import (
     get_nearby_competitors,
     search_competitors_by_text,
     filter_relevant_competitors,
     summarize_competition
-)
+)                                                          # these 4 fucntions comes from competition.py that handles Google Places competition pipeline.
 
 from src.analysis.location_context import (
     get_location_context
-)
+)                                                          # this function comes from location_context.py that handles location-specific context analysis.
 
 from src.analysis.opportunity import (
     analyze_business_opportunity
-)
+)                                                          # this function comes from opportunity.py that handles business opportunity analysis.
 
 
 def analyze_business(
@@ -116,6 +116,7 @@ def analyze_business(
         primary_cuisine=primary_cuisine,
         cuisine_count=cuisine_count,
         primary_rest_type=primary_rest_type,
+
         historical_restaurant_count=(
             historical_restaurant_count
         ),
@@ -146,7 +147,7 @@ def analyze_business(
             f"in {location}"
         )
 
-    text_candidates = search_competitors_by_text(
+    text_candidates = search_competitors_by_text(                    # it calls fucntion from competitor.py which then uses google places api
         latitude=latitude,
         longitude=longitude,
         search_query=search_query,
@@ -198,7 +199,7 @@ def analyze_business(
 
     competition_summary = (
         summarize_competition(
-            relevant_competitors
+            relevant_competitors                         #it calculates things like count, avg rating,reviews, median reviews etc.
         )
     )
 
@@ -262,7 +263,7 @@ def analyze_business(
     ]
 
     opportunity_result = (
-        analyze_business_opportunity(
+        analyze_business_opportunity(                    # it calls fucntion from opportunity.py and this is where final scoring happens.
             probabilities,
             model_classes,
             competition_summary

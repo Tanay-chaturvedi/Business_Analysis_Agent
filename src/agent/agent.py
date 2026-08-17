@@ -1,16 +1,16 @@
-from google.adk.agents import Agent
+from google.adk.agents import Agent  #imports google's ADK Agent
 
 from src.analysis.business_analyzer import (
     analyze_business
-)
+)                                    # here we are importing analyze_business() from business_analyzer.py
 
 from src.places.competition import (
     resolve_location_coordinates
-)
+)                                   #  importing resolve_location_coordinates() from competition.py
 
 
 
-# BUSINESS ANALYSIS TOOL
+# BUSINESS ANALYSIS TOOL= Bridge between Gemini and Python code; This function receives the information needed to analyze a proposed business.
 def business_analysis_tool(
     location: str,
     business_type: str,
@@ -55,7 +55,7 @@ def business_analysis_tool(
         )
 
  #Business Analysis
-
+ # Here agent.py gathers the information and passes it into our analysis engine.
     return analyze_business(
 
         location=location,
@@ -645,6 +645,6 @@ Your role is to:
 """,
 
     tools=[
-        business_analysis_tool
+        business_analysis_tool              #This is the Python tool we are allowed to call
     ]
 )
