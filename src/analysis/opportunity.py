@@ -8,10 +8,8 @@ def analyze_business_opportunity(
     using historical ML performance and current competition.
     """
 
-    # -----------------------------
+   
     # 1. Historical performance
-    # -----------------------------
-
     class_probabilities = dict(
         zip(model_classes, probabilities)
     )
@@ -24,10 +22,8 @@ def analyze_business_opportunity(
         + medium_probability * 50
     )
 
-    # -----------------------------
+   
     # 2. Competition strength
-    # -----------------------------
-
     competitor_count = competition_summary[
         "competitor_count_retrieved"
     ]
@@ -66,19 +62,15 @@ def analyze_business_opportunity(
     else:
         competition_score = 0
 
-    # -----------------------------
+    
     # 3. Opportunity score
-    # -----------------------------
-
     opportunity_score = (
         0.60 * performance_score
         + 0.40 * (100 - competition_score)
     )
 
-    # -----------------------------
+ 
     # 4. Performance signal
-    # -----------------------------
-
     if performance_score < 40:
         performance_signal = (
             "Weak historical performance"
@@ -92,10 +84,8 @@ def analyze_business_opportunity(
             "Strong historical performance"
         )
 
-    # -----------------------------
+  
     # 5. Competition signal
-    # -----------------------------
-
     if competition_score >= 70:
         competition_signal = "Strong competition"
     elif competition_score >= 40:
@@ -103,10 +93,8 @@ def analyze_business_opportunity(
     else:
         competition_signal = "Limited competition"
 
-    # -----------------------------
+   
     # 6. Opportunity classification
-    # -----------------------------
-
     if opportunity_score < 40:
         opportunity_class = "Low"
     elif opportunity_score < 70:
@@ -114,9 +102,7 @@ def analyze_business_opportunity(
     else:
         opportunity_class = "High"
 
-    # -----------------------------
     # 7. Final result
-    # -----------------------------
 
     return {
         "opportunity_score": round(
