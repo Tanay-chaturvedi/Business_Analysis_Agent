@@ -54,9 +54,8 @@ def analyze_business(
         Final Structured Result
     """
 
-    # ========================================================
+
     # 1. LOCATION CONTEXT
-    # ========================================================
 
     location_context = get_location_context(
         location
@@ -104,9 +103,7 @@ def analyze_business(
         ]
     )
 
-    # ========================================================
     # 2. MACHINE LEARNING PREDICTION
-    # ========================================================
 
     ml_result = predict_business_performance(
         online_order=online_order,
@@ -139,9 +136,8 @@ def analyze_business(
         )
     )
 
-    # ========================================================
+
     # 3. TEXT SEARCH
-    # ========================================================
 
     if search_query is None:
         search_query = (
@@ -158,9 +154,8 @@ def analyze_business(
         max_results=max_results
     )
 
-    # ========================================================
+
     # 4. RELEVANCE FILTERING
-    # ========================================================
 
     relevant_competitors = (
         filter_relevant_competitors(
@@ -170,9 +165,7 @@ def analyze_business(
         )
     )
 
-    # ========================================================
     # 5. FALLBACK TO NEARBY SEARCH
-    # ========================================================
 
     # If Text Search returned no relevant results,
     # use the original Nearby Search method.
@@ -199,9 +192,9 @@ def analyze_business(
                 "competition_category"
             ] = "direct"
 
-    # ========================================================
+   
     # 6. COMPETITION SUMMARY
-    # ========================================================
+   
 
     competition_summary = (
         summarize_competition(
@@ -248,9 +241,9 @@ def analyze_business(
             "indirect_competitors"
         ] = 0
 
-    # ========================================================
+ 
     # 7. OPPORTUNITY ANALYSIS
-    # ========================================================
+  
 
     probability_dict = ml_result[
         "probabilities"
@@ -276,9 +269,8 @@ def analyze_business(
         )
     )
 
-    # ========================================================
     # 8. COMPETITOR RECORDS
-    # ========================================================
+  
 
     if relevant_competitors.empty:
 
@@ -312,9 +304,8 @@ def analyze_business(
             )
         )
 
-    # ========================================================
+   
     # 9. FINAL STRUCTURED RESULT
-    # ========================================================
 
     return {
 
