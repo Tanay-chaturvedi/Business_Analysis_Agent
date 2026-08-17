@@ -2,9 +2,8 @@ import os
 import pandas as pd
 
 
-# ============================================================
+
 # PROJECT ROOT
-# ============================================================
 
 BASE_DIR = os.path.abspath(
     os.path.join(
@@ -22,9 +21,7 @@ DATA_PATH = os.path.join(
 )
 
 
-# ============================================================
 # LOCATION NORMALIZATION
-# ============================================================
 
 def normalize_location(location: str) -> str:
     """
@@ -68,10 +65,8 @@ def normalize_location(location: str) -> str:
     return location
 
 
-# ============================================================
-# LOCATION CONTEXT
-# ============================================================
 
+# LOCATION CONTEXT
 def get_location_context(location: str) -> dict:
     """
     Retrieve historical location-level business context
@@ -91,10 +86,8 @@ def get_location_context(location: str) -> dict:
         DATA_PATH
     )
 
-    # --------------------------------------------------------
+   
     # Normalize dataset locations
-    # --------------------------------------------------------
-
     df["_location_normalized"] = (
         df["location"]
         .astype(str)
@@ -103,28 +96,25 @@ def get_location_context(location: str) -> dict:
         )
     )
 
-    # --------------------------------------------------------
+    
     # Normalize user location
-    # --------------------------------------------------------
-
     requested_location = (
         normalize_location(
             location
         )
     )
 
-    # --------------------------------------------------------
+    
     # Find location
-    # --------------------------------------------------------
+   
 
     location_data = df[
         df["_location_normalized"]
         == requested_location
     ]
 
-    # --------------------------------------------------------
+   
     # Location not found
-    # --------------------------------------------------------
 
     if location_data.empty:
 
@@ -137,16 +127,13 @@ def get_location_context(location: str) -> dict:
             )
         }
 
-    # --------------------------------------------------------
-    # Retrieve first matching row
-    # --------------------------------------------------------
 
+    # Retrieve first matching row
+  
     row = location_data.iloc[0]
 
-    # --------------------------------------------------------
     # Return location context
-    # --------------------------------------------------------
-
+  
     return {
 
         # Preserve the original user input
