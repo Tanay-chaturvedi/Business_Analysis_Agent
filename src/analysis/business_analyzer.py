@@ -161,8 +161,7 @@ def analyze_business(
     relevant_competitors = (
         filter_relevant_competitors(
             text_candidates,
-            business_type=business_type,
-            include_indirect=True
+            business_type=business_type
         )
     )
 
@@ -221,26 +220,9 @@ def analyze_business(
             ).sum()
         )
 
-        competition_summary[
-            "indirect_competitors"
-        ] = int(
-            (
-                relevant_competitors[
-                    "competition_category"
-                ]
-                == "indirect"
-            ).sum()
-        )
-
     else:
+        competition_summary["direct_competitors"] = 0
 
-        competition_summary[
-            "direct_competitors"
-        ] = 0
-
-        competition_summary[
-            "indirect_competitors"
-        ] = 0
 
  
     # 7. OPPORTUNITY ANALYSIS

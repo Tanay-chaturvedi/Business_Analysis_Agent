@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 # LOAD ENVIRONMENT VARIABLES
 
 
-load_dotenv()
+load_dotenv()                          #Here we load the environment variables from a .env file into the environment.
 
 google_maps_key = os.getenv(
     "GOOGLE_MAPS_API_KEY"
@@ -18,16 +18,7 @@ google_maps_key = os.getenv(
 
 
 
-# GOOGLE PLACES TYPE VALIDATION
-
-
-# Google Places types that we currently allow our
-# application to send to Nearby Search.
-#
-# This is intentionally a validation layer, not a huge
-# hard-coded natural-language mapping.
-
-SUPPORTED_BUSINESS_TYPES = {
+SUPPORTED_BUSINESS_TYPES = {           # set of supported business types.
     "restaurant",
     "cafe",
     "bakery",
@@ -57,7 +48,7 @@ SUPPORTED_BUSINESS_TYPES = {
 }
 
 
-def validate_business_type(
+def validate_business_type(             # this function ensures that the provided business type is a valid Google Places business type. It raises errors for invalid inputs and returns the cleaned business type if valid.
     business_type: str
 ) -> str:
     """
@@ -73,28 +64,20 @@ def validate_business_type(
     It does not try to interpret arbitrary user language.
     """
 
-    if not isinstance(
-        business_type,
-        str
-    ):
+    if not isinstance(business_type,str):           #if the business type is not a string, raise a TypeError.
         raise TypeError(
             "business_type must be a string."
         )
 
-    business_type = (
-        business_type
-        .strip()
-        .lower()
-    )
+    business_type = (business_type.strip().lower())       # cleans the business type by stripping whitespace and converting to lowercase.
+    
 
-    if not business_type:
+    if not business_type:                               # if user provides an empty string, raise a ValueError.
         raise ValueError(
             "business_type cannot be empty."
         )
 
-    if business_type not in (
-        SUPPORTED_BUSINESS_TYPES
-    ):
+    if business_type not in (SUPPORTED_BUSINESS_TYPES):        # if the business type is not in the list of supported business types, raise a ValueError.
         raise ValueError(
             f"Unsupported Google Places "
             f"business type: "
@@ -102,12 +85,9 @@ def validate_business_type(
         )
 
     return business_type
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-# GOOGLE PLACES — LOCATION RESOLUTION
-
-
-def resolve_location_coordinates(
+def resolve_location_coordinates(                     # its purpose is to convert a human-readable location into latitude and longitude coordinates using the Google Places Text Search API. It raises errors for invalid inputs.
     location: str
 ) -> tuple[float, float]:
     """
@@ -137,19 +117,19 @@ def resolve_location_coordinates(
             "location cannot be empty."
         )
 
-    url = (
-        "https://places.googleapis.com/v1/"
-        "places:searchText"
+    url = (                                     # code uses the Google Places Text Search API to resolve the location into coordinates.
+        "https://places.googleapis.com/v1/"     # it is the base address for the Google Places API.
+        "places:searchText"                     # it means that the API will perform a text-based search for places based on the provided location string.
     )
 
-    headers = {
-        "Content-Type": "application/json",
+    headers = {                                # it tells google places api how to process request and what to return in response
+        "Content-Type": "application/json",    # data is being sent in json format, and the client expects a JSON response from the API.
 
         "X-Goog-Api-Key": (
             google_maps_key
         ),
 
-        "X-Goog-FieldMask": (
+        "X-Goog-FieldMask": (                 # it tells the API which specific fields of information about the places should be included in the response.
             "places.id,"
             "places.displayName,"
             "places.formattedAddress,"
@@ -157,12 +137,12 @@ def resolve_location_coordinates(
         )
     }
 
-    payload = {
+    payload = {                              # payload meaning= what are we asking to search for, and how many results we want.
         "textQuery": location,
         "maxResultCount": 1
     }
 
-    response = requests.post(
+    response = requests.post(             # it sends a POST request to the Google Places API. The response from the API is stored in the response variable.
         url,
         headers=headers,
         json=payload
@@ -177,10 +157,8 @@ def resolve_location_coordinates(
 
     data = response.json()
 
-    places = data.get(
-        "places",
-        []
-    )
+    places = data.get("places",[])
+    
 
     if not places:
         raise ValueError(
@@ -188,18 +166,10 @@ def resolve_location_coordinates(
             f"'{location}' using Google Places."
         )
 
-    coordinates = places[0].get(
-        "location",
-        {}
-    )
+    coordinates = places[0].get("location",{})     # it stores the coordinates of the first place returned by the API in the coordinates variable. If no location is found, it defaults to an empty dictionary.
 
-    latitude = coordinates.get(
-        "latitude"
-    )
-
-    longitude = coordinates.get(
-        "longitude"
-    )
+    latitude = coordinates.get("latitude")         # if {} empty dictionary is returned, then latitude and longitude will be None. If the coordinates are found, it extracts the latitude and longitude values from the coordinates dictionary.
+    longitude = coordinates.get("longitude")
 
     if latitude is None or longitude is None:
         raise ValueError(
@@ -212,15 +182,14 @@ def resolve_location_coordinates(
         float(longitude)
     )
 
-# GOOGLE PLACES — NEARBY SEARCH
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-def get_nearby_competitors(
+def get_nearby_competitors(     # based on the provided latitude, longitude, and business type, this function retrieves nearby competitors using the Google Places Nearby Search API. It raises errors for invalid inputs and returns a DataFrame containing competitor information.
     latitude,
     longitude,
     business_type,
     radius_km=3,
-    max_results=20
+    max_results=20              #funxtion needs 5 inputs, latitude, longitude, business_type, radius_km, max_results.
 ):
     """
     Retrieve nearby competitors using Google Places
@@ -235,23 +204,21 @@ def get_nearby_competitors(
         )
 
     # Validate Google Places type
-    business_type = validate_business_type(
-        business_type
-    )
+    business_type = validate_business_type( business_type)
 
     url = (
         "https://places.googleapis.com/v1/"
-        "places:searchNearby"
+        "places:searchNearby"                   # searchNearby endpoint of the Google Places API is used to find places near a specific location based on the provided latitude and longitude.
     )
 
-    headers = {
-        "Content-Type": "application/json",
+    headers = {                                 # here we are defining the headers for the HTTP request to the Google Places API. These headers provide information about the request and specify how the API should respond.
+        "Content-Type": "application/json",     # requests and responses will be in JSON format.
 
         "X-Goog-Api-Key": (
             google_maps_key
         ),
 
-        "X-Goog-FieldMask": (
+        "X-Goog-FieldMask": (                   # i want these specific fields in the response from the API.
             "places.id,"
             "places.displayName,"
             "places.formattedAddress,"
@@ -264,13 +231,10 @@ def get_nearby_competitors(
     }
 
     payload = {
-        "includedTypes": [
-            business_type
-        ],
-
+        "includedTypes": [business_type],    # this specifies the types of places to include in the search results. In this case, it includes only places that match the specified business type.
         "maxResultCount": max_results,
 
-        "locationRestriction": {
+        "locationRestriction": {                 # this defines a circular area around the specified latitude and longitude within which the search will be restricted. The radius is specified in meters (radius_km * 1000).
             "circle": {
                 "center": {
                     "latitude": latitude,
@@ -295,109 +259,46 @@ def get_nearby_competitors(
             f"{response.text}"
         )
 
-    data = response.json()
+    data = response.json()              
 
-    rows = []
+    rows = []                            # empty list to store competitor information.
 
-    for place in data.get(
-        "places",
-        []
-    ):
-
+    for place in data.get("places",[]):  # loop through the list of places returned by the API. For each place, it extracts relevant information and appends it to the rows list as a dictionary.
         rows.append({
-            "place_id": place.get(
-                "id"
-            ),
-
-            "name": place.get(
-                "displayName",
-                {}
-            ).get(
-                "text"
-            ),
-
-            "address": place.get(
-                "formattedAddress"
-            ),
-
-            "rating": place.get(
-                "rating"
-            ),
-
-            "review_count": place.get(
-                "userRatingCount"
-            ),
-
-            "price_level": place.get(
-                "priceLevel"
-            ),
-
-            "types": place.get(
-                "types"
-            ),
-
-            "latitude": place.get(
-                "location",
-                {}
-            ).get(
-                "latitude"
-            ),
-
-            "longitude": place.get(
-                "location",
-                {}
-            ).get(
-                "longitude"
-            )
+            "place_id": place.get("id"),
+            "name": place.get("displayName",{}).get("text"),
+            "address": place.get("formattedAddress"),
+            "rating": place.get("rating"),
+            "review_count": place.get("userRatingCount"),
+            "price_level": place.get("priceLevel"),
+            "types": place.get("types"),
+            "latitude": place.get("location",{}).get("latitude"),
+            "longitude": place.get("location",{}).get("longitude")
         })
 
-    df = pd.DataFrame(
-        rows
-    )
+    df = pd.DataFrame(rows)       # it converts the list of competitor information into a pandas DataFrame for easier manipulation and analysis.
 
     if df.empty:
         return df
 
     # Remove duplicate businesses
-    df = (
-        df
-        .drop_duplicates(
-            subset="place_id"
-        )
-        .reset_index(
-            drop=True
-        )
-    )
+    df = (df.drop_duplicates(subset="place_id").reset_index(drop=True))        # drop duplicates based on the "place_id" column to ensure that each competitor is represented only once in the DataFrame. The index is reset after dropping duplicates.
 
-    return df
+    return df                  # returns the DataFrame containing information about nearby competitors based on the specified criteria.
 
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-# GOOGLE PLACES — TEXT SEARCH
-
-
-def search_competitors_by_text(
+def search_competitors_by_text(     # based on the provided latitude, longitude, and search query, this function searches for businesses using the Google Places Text Search API. It raises errors for invalid inputs and returns a DataFrame containing business information.
     latitude,
     longitude,
-    search_query,
+    search_query,                   # function needs 5 inputs: latitude, longitude, search_query, radius_km, max_results. Search query can be natural language like "ramen restaurants", "momos shops", "vegan bakery", etc.
     radius_km=3,
     max_results=20
 ):
     """
     Search for businesses using Google's Text Search API.
 
-    Useful for natural-language concepts such as:
-
-        "ramen restaurants"
-        "momos shops"
-        "vegan bakery"
-        "dessert parlour"
-        "protein meal restaurants"
-
-    IMPORTANT:
-    Text Search results are broader candidates.
-    They should not automatically be treated as direct
-    competitors without relevance filtering.
+    This searches using a natural-language text query.
     """
 
     if not google_maps_key:
@@ -405,18 +306,13 @@ def search_competitors_by_text(
             "GOOGLE_MAPS_API_KEY not found in .env"
         )
 
-    if not isinstance(
-        search_query,
-        str
-    ):
+    # Validate that search_query is a string
+    if not isinstance(search_query, str):
         raise TypeError(
             "search_query must be a string."
         )
 
-    search_query = (
-        search_query
-        .strip()
-    )
+    search_query = search_query.strip()   # removes unnecessary spaces from the beginning and end of the search query.
 
     if not search_query:
         raise ValueError(
@@ -425,17 +321,17 @@ def search_competitors_by_text(
 
     url = (
         "https://places.googleapis.com/v1/"
-        "places:searchText"
+        "places:searchText"             # searchText endpoint of the Google Places API is used to find places based on a text query. Unlike searchNearby, this allows natural-language searches such as "ramen restaurants" or "vegan bakery".
     )
 
-    headers = {
-        "Content-Type": "application/json",
+    headers = {                         # here we are defining the headers for the HTTP request to the Google Places API. These headers provide information about the request and specify how the API should respond.
+        "Content-Type": "application/json",     # requests and responses will be in JSON format.
 
         "X-Goog-Api-Key": (
             google_maps_key
         ),
 
-        "X-Goog-FieldMask": (
+        "X-Goog-FieldMask": (           # i want these specific fields in the response from the API.
             "places.id,"
             "places.displayName,"
             "places.formattedAddress,"
@@ -448,11 +344,11 @@ def search_competitors_by_text(
     }
 
     payload = {
-        "textQuery": search_query,
+        "textQuery": search_query,      # this specifies the text that Google should search for. It can be a natural-language query such as "ramen restaurants" or "protein meal restaurants".
 
-        "maxResultCount": max_results,
+        "maxResultCount": max_results,  # this specifies the maximum number of places that Google should return.
 
-        "locationBias": {
+        "locationBias": {               # this tells Google to prefer/search around the specified latitude and longitude. The radius is specified in meters (radius_km * 1000).
             "circle": {
                 "center": {
                     "latitude": latitude,
@@ -477,267 +373,86 @@ def search_competitors_by_text(
             f"{response.text}"
         )
 
-    data = response.json()
+    data = response.json()              # converts the JSON response received from Google into a Python dictionary so that we can access the returned places.
 
-    rows = []
+    rows = []                           # empty list to store information about each business returned by the API.
 
-    for place in data.get(
-        "places",
-        []
-    ):
-
+    for place in data.get("places",[]): # loop through the list of places returned by the API. For each place, it extracts relevant information and appends it to the rows list as a dictionary.
         rows.append({
-            "place_id": place.get(
-                "id"
-            ),
-
-            "name": place.get(
-                "displayName",
-                {}
-            ).get(
-                "text"
-            ),
-
-            "address": place.get(
-                "formattedAddress"
-            ),
-
-            "rating": place.get(
-                "rating"
-            ),
-
-            "review_count": place.get(
-                "userRatingCount"
-            ),
-
-            "price_level": place.get(
-                "priceLevel"
-            ),
-
-            "types": place.get(
-                "types"
-            ),
-
-            "latitude": place.get(
-                "location",
-                {}
-            ).get(
-                "latitude"
-            ),
-
-            "longitude": place.get(
-                "location",
-                {}
-            ).get(
-                "longitude"
-            )
+            "place_id": place.get("id"),
+            "name": place.get("displayName",{}).get("text"),
+            "address": place.get("formattedAddress"),
+            "rating": place.get("rating"),
+            "review_count": place.get("userRatingCount"),
+            "price_level": place.get("priceLevel"),
+            "types": place.get("types"),
+            "latitude": place.get("location",{}).get("latitude"),
+            "longitude": place.get("location",{}).get("longitude")
         })
 
-    df = pd.DataFrame(
-        rows
-    )
+    df = pd.DataFrame(rows)             # converts the list of business information into a pandas DataFrame for easier manipulation and analysis.
 
     if df.empty:
         return df
 
     # Remove duplicate businesses
-    df = (
-        df
-        .drop_duplicates(
-            subset="place_id"
-        )
-        .reset_index(
-            drop=True
-        )
-    )
+    df = (df.drop_duplicates(subset="place_id").reset_index(drop=True))   # drops duplicate businesses based on the "place_id" column so that each business is represented only once. The index is reset after removing duplicates.
 
     return df
-
-
-
-# COMPETITOR RELEVANCE FILTER
-
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def filter_relevant_competitors(
     competitors,
-    business_type,
-    include_indirect=True
+    business_type
 ):
     """
-    Filter Google Places Text Search results into
-    relevant direct and indirect competitors.
+    Filter Google Places results and keep only
+    direct competitors.
 
     Direct competitors:
         Businesses whose Google Places types match
         the proposed business type.
-
-    Indirect competitors:
-        Closely related business categories that compete
-        for similar customer demand.
-
-    This function is deterministic and does not use Gemini.
     """
 
+    # No competitors returned
     if competitors.empty:
         return competitors.copy()
 
-    
-    # Related Google Places categories
-
-
-    related_types = {
-
-        "ramen_restaurant": {
-            "ramen_restaurant",
-            "noodle_shop",
-            "japanese_restaurant",
-            "asian_restaurant",
-            "chinese_noodle_restaurant"
-        },
-
-        "pizza_restaurant": {
-            "pizza_restaurant",
-            "italian_restaurant"
-        },
-
-        "ice_cream_shop": {
-            "ice_cream_shop",
-            "dessert_restaurant",
-            "dessert_shop",
-            "bakery"
-        },
-
-        "cafe": {
-            "cafe",
-            "coffee_shop",
-            "dessert_restaurant",
-            "bakery"
-        },
-
-        "bakery": {
-            "bakery",
-            "dessert_shop",
-            "dessert_restaurant",
-            "cafe"
-        },
-
-        "sushi_restaurant": {
-            "sushi_restaurant",
-            "japanese_restaurant",
-            "asian_restaurant"
-        },
-
-        "chinese_restaurant": {
-            "chinese_restaurant",
-            "chinese_noodle_restaurant",
-            "noodle_shop",
-            "asian_restaurant"
-        },
-
-        "indian_restaurant": {
-            "indian_restaurant",
-            "north_indian_restaurant",
-            "south_indian_restaurant"
-        },
-
-        "north_indian_restaurant": {
-            "north_indian_restaurant",
-            "indian_restaurant"
-        },
-
-        "south_indian_restaurant": {
-            "south_indian_restaurant",
-            "indian_restaurant"
-        },
-
-        "hamburger_restaurant": {
-            "hamburger_restaurant",
-            "fast_food_restaurant"
-        },
-
-        "fast_food_restaurant": {
-            "fast_food_restaurant",
-            "hamburger_restaurant",
-            "sandwich_shop"
-        }
-    }
-
-    relevant_types = related_types.get(
-        business_type,
-        {business_type}
-    )
-
-   
-    # Determine relevance
-   
     relevant_rows = []
 
+    # Check every Google Places result
     for _, row in competitors.iterrows():
 
-        place_types = row.get(
-            "types",
-            []
-        )
+        place_types = row.get("types",[])
 
-        if not isinstance(
-            place_types,
-            list
-        ):
+        # Ensure types is a list
+        if not isinstance(place_types, list):
             place_types = []
 
-        # Direct match
-        is_direct = (
-            business_type in place_types
-        )
-
-        # Related/indirect match
-        is_indirect = (
-            any(
-                place_type in relevant_types
-                for place_type in place_types
-            )
-        )
+        # Direct competitor check
+        is_direct = ( business_type in place_types)
 
         if is_direct:
 
+            # Copy row so original DataFrame
+            # is not modified
             row = row.copy()
 
-            row[
-                "competition_category"
-            ] = "direct"
-
+            # Mark as direct competitor
+            row["competition_category"] = "direct"
             relevant_rows.append(row)
 
-        elif (
-            include_indirect
-            and is_indirect
-        ):
-
-            row = row.copy()
-
-            row[
-                "competition_category"
-            ] = "indirect"
-
-            relevant_rows.append(row)
-
+    # No direct competitors found return an empty DataFrame
     if not relevant_rows:
-        return competitors.iloc[
-            0:0
-        ].copy()
+        return pd.DataFrame()
 
-    return pd.DataFrame(
-        relevant_rows
-    ).reset_index(
-        drop=True
-    )
-
-# COMPETITION SUMMARY
+    
+    return pd.DataFrame(relevant_rows).reset_index(drop=True)               # converts the filtered competitor list back into a DataFrame and resets the index.
 
 
-def summarize_competition(
-    competitors
-):
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def summarize_competition(competitors):
     """
     Calculate deterministic competition metrics
     from competitor data.
@@ -770,109 +485,42 @@ def summarize_competition(
 
     
     # Remove missing values
-   
+    ratings = (competitors["rating" ].dropna())
+    reviews = (competitors["review_count"].dropna())
 
-    ratings = (
-        competitors[
-            "rating"
-        ]
-        .dropna()
-    )
-
-    reviews = (
-        competitors[
-            "review_count"
-        ]
-        .dropna()
-    )
-
+    competitor_count = len(competitors) # it counts the total number of competitors in the DataFrame, regardless of whether they have ratings or reviews. This gives a complete picture of the competitive landscape, including businesses that may not have received any ratings or reviews yet.
     
-    # Basic counts
-    
-
-    competitor_count = len(
-        competitors
-    )
 
    
     # Rating statistics
-   
 
-    avg_rating = (
-        ratings.mean()
-        if len(ratings)
-        else 0
-    )
+    avg_rating = (ratings.mean() if len(ratings)else 0)
 
-    median_rating = (
-        ratings.median()
-        if len(ratings)
-        else 0
-    )
+    median_rating = (ratings.median() if len(ratings)else 0)
 
     
     # Review statistics
     
-    avg_reviews = (
-        reviews.mean()
-        if len(reviews)
-        else 0
-    )
+    avg_reviews = (reviews.mean() if len(reviews)else 0)
 
-    median_reviews = (
-        reviews.median()
-        if len(reviews)
-        else 0
-    )
+    median_reviews = (reviews.median() if len(reviews)else 0)
 
-    
+
     # Competition thresholds
-   
 
-    high_rating_competitors = (
-        ratings >= 4.5
-    ).sum()
+    high_rating_competitors = (ratings >= 4.5).sum() # Count of competitors with ratings >= 4.5
 
-    high_review_competitors = (
-        reviews >= 2000
-    ).sum()
+    high_review_competitors = (reviews >= 2000).sum() # Count of competitors with reviews >= 2000
 
    
     # Final summary
-   
-
     return {
-
-        "competitor_count_retrieved": int(
-            competitor_count
-        ),
-
-        "avg_competitor_rating": round(
-            float(avg_rating),
-            3
-        ),
-
-        "median_competitor_rating": round(
-            float(median_rating),
-            3
-        ),
-
-        "avg_competitor_reviews": round(
-            float(avg_reviews),
-            2
-        ),
-
-        "median_competitor_reviews": round(
-            float(median_reviews),
-            2
-        ),
-
-        "high_rating_competitors": int(
-            high_rating_competitors
-        ),
-
-        "high_review_competitors": int(
-            high_review_competitors
-        )
-    }
+    "competitor_count_retrieved": int(competitor_count),
+    "avg_competitor_rating": round(float(avg_rating), 2),
+    "median_competitor_rating": round(float(median_rating), 2),
+    "avg_competitor_reviews": round(float(avg_reviews), 2),
+    "median_competitor_reviews": round(float(median_reviews), 2),
+    "high_rating_competitors": int(high_rating_competitors),
+    "high_review_competitors": int(high_review_competitors)
+}
 
