@@ -1,91 +1,38 @@
-def analyze_business_opportunity(
-    probabilities,
-    model_classes,
-    competition_summary
-):
-    """
-    Calculate a rule-based business opportunity assessment
-    using historical ML performance and current competition.
-    """
+def analyze_business_opportunity(probabilities, model_classes, competition_summary):
 
-   
-    # 1. Historical performance
-    class_probabilities = dict(
-        zip(model_classes, probabilities)
-    )
+    """Calculate a rule-based business opportunity assessment using historical ML performance and current competition."""
 
+
+    class_probabilities = dict(zip(model_classes, probabilities))
     high_probability = class_probabilities.get("High", 0)
     medium_probability = class_probabilities.get("Medium", 0)
+    performance_score = high_probability * 100 + medium_probability * 50
 
-    performance_score = (
-        high_probability * 100
-        + medium_probability * 50
-    )
+    competitor_count = competition_summary["competitor_count_retrieved"]
+    avg_rating = competition_summary["avg_competitor_rating"]
+    avg_reviews = competition_summary["avg_competitor_reviews"]
+    high_rating_count = competition_summary["high_rating_competitors"]
+    high_review_count = competition_summary["high_review_competitors"]
 
-   
-    # 2. Competition strength
-    competitor_count = competition_summary[
-        "competitor_count_retrieved"
-    ]
-
-    avg_rating = competition_summary[
-        "avg_competitor_rating"
-    ]
-
-    avg_reviews = competition_summary[
-        "avg_competitor_reviews"
-    ]
-
-    high_rating_count = competition_summary[
-        "high_rating_competitors"
-    ]
-
-    high_review_count = competition_summary[
-        "high_review_competitors"
-    ]
 
     if competitor_count > 0:
-
-        competition_score = (
-            (avg_rating / 5) * 40
-            + min(avg_reviews / 2000, 1) * 30
-            + (
-                high_rating_count
-                / competitor_count
-            ) * 15
-            + (
-                high_review_count
-                / competitor_count
-            ) * 15
-        )
-
+        competition_score = ((avg_rating / 5) * 40 + min(avg_reviews / 2000, 1) * 30 + (high_rating_count / competitor_count) * 15 + (high_review_count / competitor_count) * 15)
     else:
         competition_score = 0
 
-    
-    # 3. Opportunity score
-    opportunity_score = (
-        0.60 * performance_score
-        + 0.40 * (100 - competition_score)
-    )
 
- 
-    # 4. Performance signal
+    opportunity_score = 0.60 * performance_score + 0.40 * (100 - competition_score)
+
+
     if performance_score < 40:
-        performance_signal = (
-            "Weak historical performance"
-        )
+        performance_signal = "Weak historical performance"
     elif performance_score < 60:
-        performance_signal = (
-            "Moderate historical performance"
-        )
+        performance_signal = "Moderate historical performance"
     else:
-        performance_signal = (
-            "Strong historical performance"
-        )
+        performance_signal = "Strong historical performance"
 
-  
-    # 5. Competition signal
+
+
     if competition_score >= 70:
         competition_signal = "Strong competition"
     elif competition_score >= 40:
@@ -93,8 +40,8 @@ def analyze_business_opportunity(
     else:
         competition_signal = "Limited competition"
 
-   
-    # 6. Opportunity classification
+
+
     if opportunity_score < 40:
         opportunity_class = "Low"
     elif opportunity_score < 70:
@@ -102,19 +49,12 @@ def analyze_business_opportunity(
     else:
         opportunity_class = "High"
 
-    # 7. Final result
 
     return {
-        "opportunity_score": round(
-            float(opportunity_score), 2
-        ),
+        "opportunity_score": round(float(opportunity_score), 2),
         "opportunity_class": opportunity_class,
-        "historical_performance": round(
-            float(performance_score), 2
-        ),
-        "competition_strength": round(
-            float(competition_score), 2
-        ),
+        "historical_performance": round(float(performance_score), 2),
+        "competition_strength": round(float(competition_score), 2),
         "performance_signal": performance_signal,
         "competition_signal": competition_signal
     }
