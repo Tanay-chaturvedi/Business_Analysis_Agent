@@ -24,7 +24,6 @@ SUPPORTED_BUSINESS_TYPES = {           # set of supported business types.
     "bakery",
     "bar",
     "pub",
-
     "pizza_restaurant",
     "ramen_restaurant",
     "sushi_restaurant",
@@ -32,18 +31,14 @@ SUPPORTED_BUSINESS_TYPES = {           # set of supported business types.
     "indian_restaurant",
     "north_indian_restaurant",
     "south_indian_restaurant",
-
     "thai_restaurant",
     "korean_restaurant",
     "mexican_restaurant",
-
     "hamburger_restaurant",
     "shawarma_restaurant",
     "taco_restaurant",
-
     "noodle_shop",
     "ice_cream_shop",
-
     "fast_food_restaurant"
 }
 
@@ -181,111 +176,6 @@ def resolve_location_coordinates(                     # its purpose is to conver
         float(latitude),
         float(longitude)
     )
-
-#------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def get_nearby_competitors(     # based on the provided latitude, longitude, and business type, this function retrieves nearby competitors using the Google Places Nearby Search API. It raises errors for invalid inputs and returns a DataFrame containing competitor information.
-    latitude,
-    longitude,
-    business_type,
-    radius_km=3,
-    max_results=20              #funxtion needs 5 inputs, latitude, longitude, business_type, radius_km, max_results.
-):
-    """
-    Retrieve nearby competitors using Google Places
-    Nearby Search API.
-
-    This searches using a Google Places business type.
-    """
-
-    if not google_maps_key:
-        raise ValueError(
-            "GOOGLE_MAPS_API_KEY not found in .env"
-        )
-
-    # Validate Google Places type
-    business_type = validate_business_type( business_type)
-
-    url = (
-        "https://places.googleapis.com/v1/"
-        "places:searchNearby"                   # searchNearby endpoint of the Google Places API is used to find places near a specific location based on the provided latitude and longitude.
-    )
-
-    headers = {                                 # here we are defining the headers for the HTTP request to the Google Places API. These headers provide information about the request and specify how the API should respond.
-        "Content-Type": "application/json",     # requests and responses will be in JSON format.
-
-        "X-Goog-Api-Key": (
-            google_maps_key
-        ),
-
-        "X-Goog-FieldMask": (                   # i want these specific fields in the response from the API.
-            "places.id,"
-            "places.displayName,"
-            "places.formattedAddress,"
-            "places.rating,"
-            "places.userRatingCount,"
-            "places.priceLevel,"
-            "places.types,"
-            "places.location"
-        )
-    }
-
-    payload = {
-        "includedTypes": [business_type],    # this specifies the types of places to include in the search results. In this case, it includes only places that match the specified business type.
-        "maxResultCount": max_results,
-
-        "locationRestriction": {                 # this defines a circular area around the specified latitude and longitude within which the search will be restricted. The radius is specified in meters (radius_km * 1000).
-            "circle": {
-                "center": {
-                    "latitude": latitude,
-                    "longitude": longitude
-                },
-
-                "radius": radius_km * 1000
-            }
-        }
-    }
-
-    response = requests.post(
-        url,
-        headers=headers,
-        json=payload
-    )
-
-    if response.status_code != 200:
-        raise Exception(
-            f"Places API error "
-            f"{response.status_code}: "
-            f"{response.text}"
-        )
-
-    data = response.json()              
-
-    rows = []                            # empty list to store competitor information.
-
-    for place in data.get("places",[]):  # loop through the list of places returned by the API. For each place, it extracts relevant information and appends it to the rows list as a dictionary.
-        rows.append({
-            "place_id": place.get("id"),
-            "name": place.get("displayName",{}).get("text"),
-            "address": place.get("formattedAddress"),
-            "rating": place.get("rating"),
-            "review_count": place.get("userRatingCount"),
-            "price_level": place.get("priceLevel"),
-            "types": place.get("types"),
-            "latitude": place.get("location",{}).get("latitude"),
-            "longitude": place.get("location",{}).get("longitude")
-        })
-
-    df = pd.DataFrame(rows)       # it converts the list of competitor information into a pandas DataFrame for easier manipulation and analysis.
-
-    if df.empty:
-        return df
-
-    # Remove duplicate businesses
-    df = (df.drop_duplicates(subset="place_id").reset_index(drop=True))        # drop duplicates based on the "place_id" column to ensure that each competitor is represented only once in the DataFrame. The index is reset after dropping duplicates.
-
-    return df                  # returns the DataFrame containing information about nearby competitors based on the specified criteria.
-
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def search_competitors_by_text(     # based on the provided latitude, longitude, and search query, this function searches for businesses using the Google Places Text Search API. It raises errors for invalid inputs and returns a DataFrame containing business information.

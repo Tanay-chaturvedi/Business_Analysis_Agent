@@ -1,7 +1,6 @@
 from src.ml.predictor import predict_business_performance  #this imports a fucntion predict_business_performance() from predictor.py.
 
 from src.places.competition import (
-    get_nearby_competitors,
     search_competitors_by_text,
     filter_relevant_competitors,
     summarize_competition
@@ -165,35 +164,8 @@ def analyze_business(
         )
     )
 
-    # 5. FALLBACK TO NEARBY SEARCH
 
-    # If Text Search returned no relevant results,
-    # use the original Nearby Search method.
-
-    if relevant_competitors.empty:
-
-        relevant_competitors = (
-            get_nearby_competitors(
-                latitude=latitude,
-                longitude=longitude,
-                business_type=business_type,
-                radius_km=radius_km,
-                max_results=max_results
-            )
-        )
-
-        if not relevant_competitors.empty:
-
-            relevant_competitors = (
-                relevant_competitors.copy()
-            )
-
-            relevant_competitors[
-                "competition_category"
-            ] = "direct"
-
-   
-    # 6. COMPETITION SUMMARY
+ # 5. COMPETITION SUMMARY
    
 
     competition_summary = (
@@ -225,7 +197,7 @@ def analyze_business(
 
 
  
-    # 7. OPPORTUNITY ANALYSIS
+    # 6. OPPORTUNITY ANALYSIS
   
 
     probability_dict = ml_result[
@@ -252,7 +224,7 @@ def analyze_business(
         )
     )
 
-    # 8. COMPETITOR RECORDS
+    # 7. COMPETITOR RECORDS
   
 
     if relevant_competitors.empty:
@@ -288,7 +260,7 @@ def analyze_business(
         )
 
    
-    # 9. FINAL STRUCTURED RESULT
+    # 8. FINAL STRUCTURED RESULT
 
     return {
 
