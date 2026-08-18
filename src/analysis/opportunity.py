@@ -1,9 +1,9 @@
 def analyze_business_opportunity(probabilities, model_classes, competition_summary):
 
     """Calculate a rule-based business opportunity assessment using historical ML performance and current competition."""
+   # this fucntion receives three inputs, probabilities from predictor.py, model_classes from business_analyzer.py and competition_summary from competition.py. It calculates a final opportunity score based on historical performance and competition strength.
 
-
-    class_probabilities = dict(zip(model_classes, probabilities))
+    class_probabilities = dict(zip(model_classes, probabilities))  #Convert probabilities into a dictionary, key is class and value is probability score
     high_probability = class_probabilities.get("High", 0)
     medium_probability = class_probabilities.get("Medium", 0)
     performance_score = high_probability * 100 + medium_probability * 50
