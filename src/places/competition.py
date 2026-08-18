@@ -6,9 +6,9 @@ import pandas as pd
 from dotenv import load_dotenv
 
 
-# ============================================================
+
 # LOAD ENVIRONMENT VARIABLES
-# ============================================================
+
 
 load_dotenv()
 
@@ -17,9 +17,9 @@ google_maps_key = os.getenv(
 )
 
 
-# ============================================================
+
 # GOOGLE PLACES TYPE VALIDATION
-# ============================================================
+
 
 # Google Places types that we currently allow our
 # application to send to Nearby Search.
@@ -103,9 +103,9 @@ def validate_business_type(
 
     return business_type
 
-# ============================================================
+
 # GOOGLE PLACES — LOCATION RESOLUTION
-# ============================================================
+
 
 def resolve_location_coordinates(
     location: str
@@ -211,9 +211,9 @@ def resolve_location_coordinates(
         float(latitude),
         float(longitude)
     )
-# ============================================================
+
 # GOOGLE PLACES — NEARBY SEARCH
-# ============================================================
+
 
 def get_nearby_competitors(
     latitude,
@@ -372,9 +372,9 @@ def get_nearby_competitors(
     return df
 
 
-# ============================================================
+
 # GOOGLE PLACES — TEXT SEARCH
-# ============================================================
+
 
 def search_competitors_by_text(
     latitude,
@@ -554,9 +554,9 @@ def search_competitors_by_text(
     return df
 
 
-# ============================================================
+
 # COMPETITOR RELEVANCE FILTER
-# ============================================================
+
 
 def filter_relevant_competitors(
     competitors,
@@ -581,9 +581,9 @@ def filter_relevant_competitors(
     if competitors.empty:
         return competitors.copy()
 
-    # --------------------------------------------------------
+    
     # Related Google Places categories
-    # --------------------------------------------------------
+
 
     related_types = {
 
@@ -667,10 +667,9 @@ def filter_relevant_competitors(
         {business_type}
     )
 
-    # --------------------------------------------------------
+   
     # Determine relevance
-    # --------------------------------------------------------
-
+   
     relevant_rows = []
 
     for _, row in competitors.iterrows():
@@ -732,9 +731,9 @@ def filter_relevant_competitors(
     ).reset_index(
         drop=True
     )
-# ============================================================
+
 # COMPETITION SUMMARY
-# ============================================================
+
 
 def summarize_competition(
     competitors
@@ -769,9 +768,9 @@ def summarize_competition(
             "high_review_competitors": 0
         }
 
-    # --------------------------------------------------------
+    
     # Remove missing values
-    # --------------------------------------------------------
+   
 
     ratings = (
         competitors[
@@ -787,17 +786,17 @@ def summarize_competition(
         .dropna()
     )
 
-    # --------------------------------------------------------
+    
     # Basic counts
-    # --------------------------------------------------------
+    
 
     competitor_count = len(
         competitors
     )
 
-    # --------------------------------------------------------
+   
     # Rating statistics
-    # --------------------------------------------------------
+   
 
     avg_rating = (
         ratings.mean()
@@ -811,10 +810,9 @@ def summarize_competition(
         else 0
     )
 
-    # --------------------------------------------------------
+    
     # Review statistics
-    # --------------------------------------------------------
-
+    
     avg_reviews = (
         reviews.mean()
         if len(reviews)
@@ -827,9 +825,9 @@ def summarize_competition(
         else 0
     )
 
-    # --------------------------------------------------------
+    
     # Competition thresholds
-    # --------------------------------------------------------
+   
 
     high_rating_competitors = (
         ratings >= 4.5
@@ -839,9 +837,9 @@ def summarize_competition(
         reviews >= 2000
     ).sum()
 
-    # --------------------------------------------------------
+   
     # Final summary
-    # --------------------------------------------------------
+   
 
     return {
 
@@ -877,3 +875,4 @@ def summarize_competition(
             high_review_competitors
         )
     }
+
