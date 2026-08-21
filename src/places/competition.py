@@ -1,22 +1,11 @@
 import os
-
 import requests
 import pandas as pd
-
 from dotenv import load_dotenv
-
-
-
 # LOAD ENVIRONMENT VARIABLES
 
-
 load_dotenv()                          #Here we load the environment variables from a .env file into the environment.
-
-google_maps_key = os.getenv(
-    "GOOGLE_MAPS_API_KEY"
-)
-
-
+google_maps_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
 SUPPORTED_BUSINESS_TYPES = {           # set of supported business types.
     "restaurant",
@@ -66,7 +55,6 @@ def validate_business_type(             # this function ensures that the provide
 
     business_type = (business_type.strip().lower())       # cleans the business type by stripping whitespace and converting to lowercase.
     
-
     if not business_type:                               # if user provides an empty string, raise a ValueError.
         raise ValueError(
             "business_type cannot be empty."
@@ -150,9 +138,9 @@ def resolve_location_coordinates(                     # its purpose is to conver
             f"{response.text}"
         )
 
-    data = response.json()
+    data = response.json()      #stores response in python dict
 
-    places = data.get("places",[])
+    places = data.get("places",[])  # find key names places in dict and store in variable, default []
     
 
     if not places:
@@ -211,7 +199,7 @@ def search_competitors_by_text(     # based on the provided latitude, longitude,
 
     url = (
         "https://places.googleapis.com/v1/"
-        "places:searchText"             # searchText endpoint of the Google Places API is used to find places based on a text query. Unlike searchNearby, this allows natural-language searches such as "ramen restaurants" or "vegan bakery".
+        "places:searchText"             # searchText endpoint of the Google Places API is used to find places based on a text query. It allows natural-language searches such as "ramen restaurants" or "vegan bakery".
     )
 
     headers = {                         # here we are defining the headers for the HTTP request to the Google Places API. These headers provide information about the request and specify how the API should respond.
@@ -338,7 +326,6 @@ def filter_relevant_competitors(
 
     
     return pd.DataFrame(relevant_rows).reset_index(drop=True)               # converts the filtered competitor list back into a DataFrame and resets the index.
-
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 

@@ -6,7 +6,9 @@ def analyze_business_opportunity(probabilities, model_classes, competition_summa
     class_probabilities = dict(zip(model_classes, probabilities))  #Convert probabilities into a dictionary, key is class and value is probability score
     high_probability = class_probabilities.get("High", 0)
     medium_probability = class_probabilities.get("Medium", 0)
-    performance_score = high_probability * 100 + medium_probability * 50
+
+
+    performance_score = high_probability * 100 + medium_probability * 50            #took full weight of high probability as it shows strongest signal
 
     competitor_count = competition_summary["competitor_count_retrieved"]
     avg_rating = competition_summary["avg_competitor_rating"]
@@ -16,7 +18,11 @@ def analyze_business_opportunity(probabilities, model_classes, competition_summa
 
 
     if competitor_count > 0:
-        competition_score = ((avg_rating / 5) * 40 + min(avg_reviews / 2000, 1) * 30 + (high_rating_count / competitor_count) * 15 + (high_review_count / competitor_count) * 15)
+        competition_score = ((avg_rating / 5) * 40
+                              + min(avg_reviews / 2000, 1) * 30 
+                              + (high_rating_count / competitor_count) * 15 
+                              + (high_review_count / competitor_count) * 15
+                              )
     else:
         competition_score = 0
 
@@ -51,10 +57,18 @@ def analyze_business_opportunity(probabilities, model_classes, competition_summa
 
 
     return {
-        "opportunity_score": round(float(opportunity_score), 2),
-        "opportunity_class": opportunity_class,
-        "historical_performance": round(float(performance_score), 2),
-        "competition_strength": round(float(competition_score), 2),
-        "performance_signal": performance_signal,
-        "competition_signal": competition_signal
+    "opportunity_score":{
+        "score":round(float(opportunity_score), 2),
+        "signal": opportunity_class
+    },
+
+    "historical_performance": {
+        "score": round(float(performance_score), 2),
+        "signal": performance_signal
+    },
+
+    "competition_strength": {
+        "score": round(float(competition_score), 2),
+        "signal": competition_signal
     }
+}

@@ -28,6 +28,7 @@ preprocessor = joblib.load(PREPROCESSOR_PATH)
 
 
 def predict_business_performance(
+        #user inputs
     online_order,
     book_table,
     approx_costfor_two_people,
@@ -36,6 +37,8 @@ def predict_business_performance(
     primary_cuisine,
     cuisine_count,
     primary_rest_type,
+
+    #location_context.py returns below ones
     historical_restaurant_count,
     location_median_cost,
     location_online_order_rate,
@@ -47,9 +50,7 @@ def predict_business_performance(
     Predict historical performance class for a proposed business.
     """
 
-    log_cost = np.log1p(
-        approx_costfor_two_people
-    )
+    log_cost = np.log1p(approx_costfor_two_people)
 
     input_data = pd.DataFrame([{
         "online_order": online_order,
@@ -76,9 +77,7 @@ def predict_business_performance(
     prediction = rf_model.predict(encoded_data)[0]
 
     # Probabilities
-    probabilities = rf_model.predict_proba(
-        encoded_data
-    )[0]
+    probabilities = rf_model.predict_proba(encoded_data)[0]
 
     probability_dict = {
         class_name: round(float(probability), 4)

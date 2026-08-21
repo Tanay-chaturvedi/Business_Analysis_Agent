@@ -1,25 +1,10 @@
 import os
 import pandas as pd
 
-
-
 # PROJECT ROOT
 
-BASE_DIR = os.path.abspath(
-    os.path.join(
-        os.path.dirname(__file__),
-        "../.."
-    )
-)
-
-
-DATA_PATH = os.path.join(
-    BASE_DIR,
-    "data",
-    "processed",
-    "zomato_train_engineered.csv"
-)
-
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__),"../.."))
+DATA_PATH = os.path.join(BASE_DIR,"data","processed","zomato_train_engineered.csv")
 
 # LOCATION NORMALIZATION
 
@@ -38,13 +23,8 @@ def normalize_location(location: str) -> str:
 
         whitefield
     """
-
-    location = (
-        str(location)
-        .strip()
-        .lower()
-    )
-
+    location = (str(location).strip().lower())
+    
     suffixes = [
         ", bengaluru",
         ", bangalore",
@@ -57,12 +37,8 @@ def normalize_location(location: str) -> str:
     for suffix in suffixes:
 
         if location.endswith(suffix):
-
-            location = location[
-                :-len(suffix)
-            ].strip()
-
-    return location
+            location = location[:-len(suffix)].strip()
+    return location     # returns location as string
 
 
 
@@ -82,49 +58,28 @@ def get_location_context(location: str) -> dict:
         location_business_type_diversity
     """
 
-    df = pd.read_csv(
-        DATA_PATH
-    )
+    df = pd.read_csv(DATA_PATH)
 
    
-    # Normalize dataset locations
-    df["_location_normalized"] = (
-        df["location"]
-        .astype(str)
-        .apply(
-            normalize_location
-        )
-    )
-
+    # Normalize dataset locations and store in new column "_location_normalized"
+    df["_location_normalized"] = (df["location"].astype(str).apply(normalize_location))
+          
     
     # Normalize user location
-    requested_location = (
-        normalize_location(
-            location
-        )
-    )
+    requested_location = (normalize_location(location))
 
-    
-    # Find location
-   
-
+    # Find location, filter the required rows
     location_data = df[
-        df["_location_normalized"]
-        == requested_location
-    ]
-
-   
+        df["_location_normalized"]== requested_location
+        ]
+  
     # Location not found
-
     if location_data.empty:
 
         return {
             "location": location,
             "found": False,
-            "message": (
-                f"No historical data found "
-                f"for location: {location}"
-            )
+            "message": (f"No historical data found "f"for location: {location}")
         }
 
 
@@ -141,39 +96,15 @@ def get_location_context(location: str) -> dict:
 
         "found": True,
 
-        "historical_restaurant_count": int(
-            row[
-                "historical_restaurant_count"
-            ]
-        ),
+        "historical_restaurant_count": int(row["historical_restaurant_count"]),
 
-        "location_median_cost": float(
-            row[
-                "location_median_cost"
-            ]
-        ),
+        "location_median_cost": float(row["location_median_cost"]),
 
-        "location_online_order_rate": float(
-            row[
-                "location_online_order_rate"
-            ]
-        ),
+        "location_online_order_rate": float(row["location_online_order_rate"]),
 
-        "location_book_table_rate": float(
-            row[
-                "location_book_table_rate"
-            ]
-        ),
+        "location_book_table_rate": float(row["location_book_table_rate"]),
 
-        "location_cuisine_diversity": int(
-            row[
-                "location_cuisine_diversity"
-            ]
-        ),
+        "location_cuisine_diversity": int(row["location_cuisine_diversity"]),
 
-        "location_business_type_diversity": int(
-            row[
-                "location_business_type_diversity"
-            ]
-        )
+        "location_business_type_diversity": int(row["location_business_type_diversity"])
     }
