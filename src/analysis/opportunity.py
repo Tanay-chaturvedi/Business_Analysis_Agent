@@ -6,9 +6,13 @@ def analyze_business_opportunity(probabilities, model_classes, competition_summa
     class_probabilities = dict(zip(model_classes, probabilities))  #Convert probabilities into a dictionary, key is class and value is probability score
     high_probability = class_probabilities.get("High", 0)
     medium_probability = class_probabilities.get("Medium", 0)
+    low_probability = class_probabilities.get("Low",0)
 
-
-    performance_score = high_probability * 100 + medium_probability * 50            #took full weight of high probability as it shows strongest signal
+    performance_score = (
+    high_probability * 100
+    + medium_probability * 60
+    + low_probability * 20
+)       #took full weight of high probability as it shows strongest signal
 
     competitor_count = competition_summary["competitor_count_retrieved"]
     avg_rating = competition_summary["avg_competitor_rating"]
