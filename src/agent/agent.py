@@ -1,16 +1,17 @@
-from google.adk.agents import Agent  #imports google's ADK Agent
+from google.adk.agents import Agent
 
 from src.analysis.business_analyzer import (
     analyze_business
-)                                    # here we are importing analyze_business() from business_analyzer.py
+)
 
 from src.places.competition import (
     resolve_location_coordinates
-)                                   #  importing resolve_location_coordinates() from competition.py
+)
 
 
 
-# BUSINESS ANALYSIS TOOL= Bridge between Gemini and Python code; This function receives the information needed to analyze a proposed business.
+# BUSINESS ANALYSIS TOOL
+
 def business_analysis_tool(
     location: str,
     business_type: str,
@@ -45,7 +46,7 @@ def business_analysis_tool(
     using Google Places.
     """
 
-
+    
     # AUTOMATIC LOCATION RESOLUTION
    
 
@@ -54,39 +55,28 @@ def business_analysis_tool(
             location
         )
 
- #Business Analysis
- # Here agent.py gathers the information and passes it into our analysis engine.
+    
+    # BUSINESS ANALYSIS
+    
+
     return analyze_business(
-
         location=location,
-
         latitude=latitude,
         longitude=longitude,
-
         business_type=business_type,
-
         primary_cuisine=primary_cuisine,
-
         cuisine_count=cuisine_count,
-
         approx_costfor_two_people=(
             approx_costfor_two_people
         ),
-
         cost_band=cost_band,
-
         online_order=online_order,
-
         book_table=book_table,
-
         primary_rest_type=(
             primary_rest_type
         ),
-
         search_query=search_query,
-
         radius_km=3,
-
         max_results=20
     )
 
@@ -458,28 +448,38 @@ Use ONLY:
 
 for the final opportunity result.
 
-Report:
+The opportunity analysis contains:
 
     opportunity_score
-    opportunity_class
+        score
+        signal
+
     historical_performance
+        score
+        signal
+
     competition_strength
-    performance_signal
-    competition_signal
+        score
+        signal
 
-ONLY if those fields are actually present
-in the tool output.
+Use the exact values returned by the tool.
 
-Do not create:
+Do NOT recalculate any score.
 
-    ML Component
-    Competition Component
-    Location Component
+Do NOT create additional scores.
 
-unless those exact fields are returned
-by the tool.
+Each score and signal MUST be reported separately.
 
-Do not recalculate the opportunity score.
+For example:
+
+    Opportunity Score: 69.0
+    Opportunity Signal: Moderate
+
+    Historical Performance: 75.0
+    Performance Signal: Strong historical performance
+
+    Competition Strength: 40.0
+    Competition Signal: Moderate competition
 
 
 ============================================================
@@ -517,6 +517,7 @@ for those statements.
 
 After successfully receiving the tool result,
 use this structure:
+
 
 ------------------------------------------------------------
 BUSINESS IDEA
@@ -586,11 +587,19 @@ OPPORTUNITY
 ------------------------------------------------------------
 
 Opportunity Score:
-Opportunity Class:
-Historical Performance:
-Competition Strength:
+Opportunity Signal:
 
-Only report fields actually returned by the tool.
+Historical Performance:
+Performance Signal:
+
+Competition Strength:
+Competition Signal:
+
+Each field MUST appear on its own separate line.
+
+Use the exact values returned by the tool.
+
+Do NOT calculate or modify any value.
 
 
 ------------------------------------------------------------
@@ -630,6 +639,9 @@ Before responding, verify:
 7. No new score was calculated.
 8. No competitor was invented.
 9. Recommendations are clearly distinguished from facts.
+10. Opportunity score and signal are reported separately.
+11. Historical performance score and signal are reported separately.
+12. Competition strength score and signal are reported separately.
 
 If a value is not available in the tool output,
 omit it rather than inventing it.
@@ -645,6 +657,6 @@ Your role is to:
 """,
 
     tools=[
-        business_analysis_tool              #This is the Python tool we are allowed to call
+        business_analysis_tool
     ]
 )
