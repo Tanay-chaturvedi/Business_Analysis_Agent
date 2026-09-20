@@ -8,7 +8,7 @@ DATA_PATH = os.path.join(BASE_DIR,"data","processed","zomato_train_engineered.cs
 
 # LOCATION NORMALIZATION
 
-def normalize_location(location: str) -> str:
+def normalize_location(location: str) -> str:      # It is called inside get_location_context()
     """
     Normalize user-provided location names.
 
