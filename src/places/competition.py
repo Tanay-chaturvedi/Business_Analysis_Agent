@@ -299,25 +299,25 @@ def filter_relevant_competitors(
     relevant_rows = []
 
     # Check every Google Places result
-    for _, row in competitors.iterrows():
+    for _, i in competitors.iterrows():
 
-        place_types = row.get("types",[])
+        place_types = i.get("types",[])
 
         # Ensure types is a list
         if not isinstance(place_types, list):
             place_types = []
 
         # Direct competitor check
-        is_direct = ( business_type in place_types)
+        is_direct = ( business_type in place_types)       # it returns boolean value
 
         if is_direct:
 
             # Copy row so original DataFrame
             # is not modified
-            row = row.copy()
+            row = i.copy()
 
             # Mark as direct competitor
-            row["competition_category"] = "direct"
+            row["competition_category"] = "direct"        #adds an extra column to row
             relevant_rows.append(row)
 
     # No direct competitors found return an empty DataFrame
