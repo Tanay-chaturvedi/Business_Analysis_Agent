@@ -1,5 +1,4 @@
 from google.adk.agents import Agent
-
 from src.analysis.opportunity import analyze_business_opportunity
 
 

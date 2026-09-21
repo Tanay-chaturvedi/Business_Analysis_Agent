@@ -1,5 +1,4 @@
 from google.adk.agents import Agent
-
 from src.analysis.location_context import get_location_context
 
 

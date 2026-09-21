@@ -7,67 +7,6 @@ from dotenv import load_dotenv
 load_dotenv()                          #Here we load the environment variables from a .env file into the environment.
 google_maps_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
-SUPPORTED_BUSINESS_TYPES = {           # set of supported business types.
-    "restaurant",
-    "cafe",
-    "bakery",
-    "bar",
-    "pub",
-    "pizza_restaurant",
-    "ramen_restaurant",
-    "sushi_restaurant",
-    "chinese_restaurant",
-    "indian_restaurant",
-    "north_indian_restaurant",
-    "south_indian_restaurant",
-    "thai_restaurant",
-    "korean_restaurant",
-    "mexican_restaurant",
-    "hamburger_restaurant",
-    "shawarma_restaurant",
-    "taco_restaurant",
-    "noodle_shop",
-    "ice_cream_shop",
-    "fast_food_restaurant"
-}
-
-
-def validate_business_type(             # this function ensures that the provided business type is a valid Google Places business type. It raises errors for invalid inputs and returns the cleaned business type if valid.
-    business_type: str
-) -> str:
-    """
-    Validate a Google Places business type.
-
-    The function expects a Google Places type such as:
-
-        cafe
-        pizza_restaurant
-        ramen_restaurant
-        ice_cream_shop
-
-    It does not try to interpret arbitrary user language.
-    """
-
-    if not isinstance(business_type,str):           #if the business type is not a string, raise a TypeError.
-        raise TypeError(
-            "business_type must be a string."
-        )
-
-    business_type = (business_type.strip().lower())       # cleans the business type by stripping whitespace and converting to lowercase.
-    
-    if not business_type:                               # if user provides an empty string, raise a ValueError.
-        raise ValueError(
-            "business_type cannot be empty."
-        )
-
-    if business_type not in (SUPPORTED_BUSINESS_TYPES):        # if the business type is not in the list of supported business types, raise a ValueError.
-        raise ValueError(
-            f"Unsupported Google Places "
-            f"business type: "
-            f"'{business_type}'"
-        )
-
-    return business_type
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def resolve_location_coordinates(                     # its purpose is to convert a human-readable location into latitude and longitude coordinates using the Google Places Text Search API. It raises errors for invalid inputs.
