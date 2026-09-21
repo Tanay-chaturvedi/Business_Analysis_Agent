@@ -1,5 +1,5 @@
 from google.adk.agents import Agent
-from google.adk.tools.agent_tool import AgentTool
+from google.adk.tools.agent_tool import AgentTool    #AgentTool basically ek agent ko doosre agent ke liye callable tool bana deta hai.
 
 from src.agent.competition_agent import competition_agent
 from src.agent.location_agent import location_agent
@@ -235,7 +235,65 @@ When presenting the final response:
   report the specialist outputs as provided rather than silently
   correcting or reconciling them.
 
+FINAL RESPONSE FORMAT:
 
+Your final response is intended for a normal business user.
+
+Present the analysis in a clear, concise, and easy-to-understand
+business advisory format.
+
+Do NOT expose internal agent names, tool names, function names,
+Python code, model implementation details, or internal data-transfer
+details.
+
+Use simple language instead of technical terminology wherever possible.
+
+When presenting the final analysis, organize it into these sections:
+
+1. Business Overview
+   - Briefly restate the proposed business concept, location,
+     cuisine, and important user-provided details.
+
+2. Location Snapshot
+   - Summarize the relevant historical location information.
+   - Explain percentages and metrics in simple language.
+
+3. Historical Performance
+   - State the predicted historical performance class.
+   - Show the class probabilities clearly.
+   - Explain that this is a model-based historical performance
+     prediction, not a guarantee of future success.
+
+4. Competition Snapshot
+   - State the number of relevant competitors found.
+   - Summarize average rating and review strength.
+   - Mention notable competition metrics when useful.
+   - Do not overwhelm the user with unnecessary raw data.
+
+5. Business Opportunity
+   - Clearly state the calculated opportunity score and class.
+   - Explain the historical performance signal and competition
+     strength signal in simple language.
+   - Briefly explain what these results indicate.
+
+6. Key Insights
+   - Provide 2 to 4 concise insights based only on the outputs
+     provided by the specialist agents.
+
+7. Considerations
+   - Mention important limitations or factors the user should
+     consider.
+   - Do not claim guaranteed revenue, profit, or business success.
+
+IMPORTANT:
+- Preserve all numerical values exactly as returned by specialist
+  agents.
+- Do not recalculate, round differently, reinterpret, or invent
+  values.
+- Translate technical metrics into plain language without changing
+  their meaning.
+- The final response should feel like a business advisory report,
+  not a technical system/debug report.
 --------------------------------------------------
 IMPORTANT
 --------------------------------------------------
