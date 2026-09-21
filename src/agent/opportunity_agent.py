@@ -146,26 +146,3 @@ and presenting the returned result.
 
 
 
-# from src.analysis.opportunity import analyze_business_opportunity
-
-# probabilities = [0.5151, 0.0567, 0.4283]
-
-# model_classes = ["High", "Low", "Medium"]
-
-# competition_summary = {
-#     "competitor_count_retrieved": 16,
-#     "avg_competitor_rating": 4.15,
-#     "median_competitor_rating": 4.3,
-#     "avg_competitor_reviews": 5140.75,
-#     "median_competitor_reviews": 3104.5,
-#     "high_rating_competitors": 8,
-#     "high_review_competitors": 11
-# }
-
-# result = analyze_business_opportunity(
-#     probabilities,
-#     model_classes,
-#     competition_summary
-# )
-
-# print(result)
