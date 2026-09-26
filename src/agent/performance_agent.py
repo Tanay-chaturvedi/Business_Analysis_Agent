@@ -40,7 +40,7 @@ def performance_analysis_tool(
 
 performance_agent = Agent(
     name="performance_agent",
-    model="gemini-3.5-flash-lite",
+    model="gemini-3.6-flash",
 
     description=(
         "Specialized agent responsible for predicting "
