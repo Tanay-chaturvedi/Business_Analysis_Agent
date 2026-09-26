@@ -23,7 +23,7 @@ def opportunity_analysis_tool(
 
 opportunity_agent = Agent(
     name="opportunity_agent",
-    model="gemini-3.5-flash-lite",
+    model="gemini-3.6-flash",
 
     description=(
         "Specialized agent responsible for evaluating "
