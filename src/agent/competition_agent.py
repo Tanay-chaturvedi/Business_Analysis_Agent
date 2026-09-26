@@ -68,7 +68,7 @@ def competition_analysis_tool(
 
 competition_agent = Agent(
     name="competition_agent",
-    model="gemini-3.5-flash-lite",
+    model="gemini-3.6-flash",
 
     description=(
         "Specialized agent responsible for finding and "
