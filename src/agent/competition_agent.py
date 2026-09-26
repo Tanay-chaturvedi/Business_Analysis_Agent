@@ -68,7 +68,7 @@ def competition_analysis_tool(
 
 competition_agent = Agent(
     name="competition_agent",
-    model="gemini-3.6-flash",
+    model="gemini-3.5-flash-lite",
 
     description=(
         "Specialized agent responsible for finding and "
@@ -119,6 +119,13 @@ You must:
    numerical value returned by the tool.
 
 8. Do NOT change any thresholds used by the tool.
+
+   The thresholds used by the Python tool are:
+   - High-rating competitor: rating >= 4.5
+   - High-review competitor: review_count >= 2000
+
+   Always report these exact thresholds when mentioning
+   high-rating or high-review competitors.
 
 9. If the tool returns a metric such as:
       high_review_competitors
