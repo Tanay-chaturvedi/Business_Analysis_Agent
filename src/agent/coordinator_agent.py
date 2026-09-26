@@ -9,7 +9,7 @@ from src.agent.opportunity_agent import opportunity_agent
 
 coordinator_agent = Agent(
     name="coordinator_agent",
-    model="gemini-3.6-flash",
+    model="gemini-3.5-flash-lite",
 
     description=(
         "Coordinator agent responsible for understanding the user's "
