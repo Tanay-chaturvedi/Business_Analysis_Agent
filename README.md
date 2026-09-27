@@ -1,788 +1,945 @@
 # AI Business Advisory Agent
 
-An AI-powered business advisory system for food and restaurant business ideas using **Google ADK, Gemini, Machine Learning, historical Zomato data, and live Google Places data**.
+An AI-powered **business intelligence and decision-support platform** for evaluating food and restaurant business opportunities using **Google ADK, Gemini, Machine Learning, SHAP Explainability, historical Zomato data, live Google Places data, deterministic financial modeling, and What-If scenario analysis**.
 
-The system uses a **multi-agent architecture** in which a Coordinator Agent delegates work to specialized agents for location analysis, performance prediction, competition analysis, and opportunity assessment.
+The system combines a **multi-agent backend** with a professional **Streamlit dashboard**, allowing a business owner to move from a business idea to structured market, performance, competition, opportunity, and financial analysis from a single interface.
 
-For example:
-
-> I want to open a premium Japanese restaurant in Koramangala, Bengaluru.
-
-The system understands the request, determines which analysis is needed, delegates the task to the appropriate specialist agents, and presents the results as a user-friendly business report.
+> **Core Principle:** Gemini orchestrates and explains. Python performs deterministic analysis. Machine Learning provides historical performance signals. Google Places provides live competition data.
 
 ---
 
-## Features
+## Key Features
 
-* Natural-language business idea analysis
-* Multi-agent architecture using Google ADK
-* Coordinator Agent for intent-based delegation
-* Specialized Location Agent
-* Specialized Performance Agent
-* Specialized Competition Agent
-* Specialized Opportunity Agent
-* Historical location analysis using Zomato data
-* Random Forest-based historical performance prediction
-* Live competitor discovery using Google Places API
-* Competitor rating and review analysis
-* Competition strength scoring
-* Business opportunity scoring
-* Structured, data-backed business insights
-* Protection against unsupported or hallucinated numerical results
-* Conversation-aware responses and user-friendly explanations
+- **Multi-Agent Business Analysis**
+- **Google ADK orchestration**
+- **Gemini-powered reasoning and coordination**
+- **Location Intelligence**
+- **Historical business performance prediction**
+- **Random Forest Machine Learning model**
+- **SHAP Explainability**
+- **Live Google Places competition analysis**
+- **Opportunity assessment**
+- **Financial simulation**
+- **Break-even analysis**
+- **Revenue and expense estimation**
+- **Financial What-If Analysis**
+- **ML What-If Analysis**
+- **Real-time analysis pipeline**
+- **Professional Streamlit dashboard**
+- **Automated test suite**
+- **Deterministic numerical calculations**
+
+---
+
+## System Architecture
+
+```text
+                         USER
+                           │
+                           ▼
+                    COORDINATOR
+                       AGENT
+                           │
+          ┌────────────────┼────────────────┐
+          ▼                ▼                ▼
+      LOCATION        PERFORMANCE      COMPETITION
+       AGENT             AGENT            AGENT
+          │                │                │
+          └────────────────┼────────────────┘
+                           ▼
+                    OPPORTUNITY
+                       AGENT
+                           │
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+          FINANCIAL     WHAT-IF        SHAP
+          SIMULATOR     ANALYSIS   EXPLAINABILITY
+              │            │            │
+              └────────────┼────────────┘
+                           ▼
+                     FINAL REPORT
+                           │
+                 ┌─────────┴─────────┐
+                 ▼                   ▼
+              Dashboard          Map / Charts
+```
+
+The architecture separates AI orchestration, machine learning, live external data, and deterministic numerical calculations.
 
 ---
 
 ## Multi-Agent Architecture
 
+The system uses a coordinator-based architecture where specialized agents handle different aspects of business analysis.
+
+### 1. Coordinator Agent
+
+The Coordinator Agent manages the complete business analysis workflow.
+
+**Responsibilities:**
+- Coordinates specialist agents
+- Controls execution order
+- Passes outputs between agents
+- Combines analysis results
+- Produces the final business analysis state
+
+The full analysis follows this sequence:
+
 ```text
-                         USER
-                           |
-                           v
-                 +------------------+
-                 |   COORDINATOR    |
-                 |      AGENT       |
-                 +--------+---------+
-                          |
-          +---------------+----------------+
-          |               |                |
-          v               v                v
- +----------------+ +----------------+ +----------------+
- |    LOCATION    | |  PERFORMANCE   | |  COMPETITION   |
- |     AGENT      | |     AGENT      | |     AGENT      |
- +-------+--------+ +-------+--------+ +-------+--------+
-         |                  |                  |
-         v                  v                  v
- Historical Zomato     Random Forest      Google Places
- Location Context      Performance       Competitor Data
-                       Prediction
-          \                  |                  /
-           \                 |                 /
-            +---------------+----------------+
-                            |
-                            v
-                  +-------------------+
-                  |   OPPORTUNITY     |
-                  |       AGENT       |
-                  +---------+---------+
-                            |
-                            v
-                    Opportunity Score
-                    + Business Signals
-                            |
-                            v
-                  +-------------------+
-                  |    COORDINATOR    |
-                  |  Final Synthesis  |
-                  +---------+---------+
-                            |
-                            v
-                           USER
+Coordinator
+     │
+     ├── Location Agent
+     │
+     ├── Performance Agent
+     │       └── Random Forest
+     │       └── SHAP Explainer
+     │
+     ├── Competition Agent
+     │       └── Google Places
+     │
+     └── Opportunity Agent
+             └── Performance + Competition
 ```
 
-### Agent Responsibilities
+### 2. Location Agent
 
-**Coordinator Agent**
+The Location Agent analyzes the selected business location.
 
-* Understands the user's intent.
-* Determines which specialist agents are required.
-* Delegates only the relevant tasks for focused requests.
-* Coordinates the analysis for complete business requests.
-* Presents the final results in a clear, user-friendly format.
-* Maintains the user's requested response language/style, such as Hinglish.
+It provides location-related context that can be used by the other analytical components.
 
-**Location Agent**
+The location analysis is designed to work independently as well as part of the complete coordinated workflow.
 
-* Analyzes historical location-level information from the processed Zomato dataset.
-* Reports restaurant density, median cost, online ordering rate, table-booking rate, cuisine diversity, and business-type diversity where available.
+### 3. Performance Agent
 
-**Performance Agent**
+The Performance Agent uses the trained machine learning model to estimate historical business performance.
 
-* Uses the trained Random Forest model.
-* Predicts historical business performance as Low, Medium, or High.
-* Returns class probabilities.
-* Does not treat model probabilities as guaranteed real-world success probabilities.
+The current implementation uses a **Random Forest classifier**.
 
-**Competition Agent**
+The agent provides:
+- Predicted performance class
+- Class probabilities
+- Performance-related business signals
+- SHAP-based feature explanations
 
-* Uses Google Places API to discover nearby candidate businesses.
-* Filters candidates using the project's supported business types.
-* Calculates competitor counts, ratings, review statistics, and competition metrics.
-* Returns the structured competition data used by the system.
+The prediction is generated by the actual trained model rather than by an LLM-generated estimate.
 
-**Opportunity Agent**
+### 4. Competition Agent
 
-* Combines the historical performance probabilities and competition summary.
-* Uses the project's deterministic opportunity-scoring logic.
-* Returns opportunity score, historical performance signal, and competition strength signal.
+The Competition Agent retrieves live nearby business information using Google Places.
+
+It provides information such as:
+- Nearby competitors
+- Business names
+- Ratings
+- Review counts
+- Categories
+- Geographic coordinates
+- Competition context
+
+This allows the system to combine historical business data with current local competition information.
+
+### 5. Opportunity Agent
+
+The Opportunity Agent combines business performance signals and competition information to produce an opportunity assessment.
+
+It uses the outputs from:
+
+```text
+Performance Analysis
+        +
+Competition Analysis
+        ↓
+Opportunity Assessment
+```
+
+The Opportunity Agent does not independently invent the underlying numerical data.
 
 ---
 
-## Intent-Based Delegation
+## Intent-Based Execution
 
-The Coordinator does not need to call every agent for every request.
+The system supports both individual specialist analysis and full coordinated analysis.
 
 For example:
 
 ```text
-User asks only about competitors
-        |
-        v
-Competition Agent only
+Location-only request
+        ↓
+Location Agent
+
+Performance-only request
+        ↓
+Performance Agent
+
+Competition-only request
+        ↓
+Competition Agent
+
+Opportunity request
+        ↓
+Opportunity Agent
+
+Full business analysis
+        ↓
+Coordinator Agent
+        ↓
+All required specialist agents
 ```
 
-```text
-User asks only about historical location
-        |
-        v
-Location Agent only
-```
-
-```text
-User asks only about expected performance
-        |
-        v
-Performance Agent only
-```
-
-For a complete business analysis, the Coordinator gathers the required specialist results and then uses the Opportunity Agent after the required performance and competition data are available.
-
-This keeps focused requests efficient and prevents unnecessary agent calls.
+This allows individual agents to remain independently callable while also supporting a complete end-to-end workflow.
 
 ---
 
-## How It Works
+## Gemini and Google ADK
 
-```text
-USER
- |
- v
-COORDINATOR AGENT
- |
- |-- Understand intent
- |-- Collect missing business information
- |-- Decide which specialist agents are required
- |
- +----> LOCATION AGENT
- |          |
- |          +--> Historical Zomato location context
- |
- +----> PERFORMANCE AGENT
- |          |
- |          +--> Random Forest prediction
- |
- +----> COMPETITION AGENT
- |          |
- |          +--> Google Places
- |          +--> Candidate filtering
- |          +--> Competition statistics
- |
- +----> OPPORTUNITY AGENT
-            |
-            +--> Performance + Competition signals
-            +--> Opportunity score
- |
- v
-COORDINATOR
- |
- v
-FINAL BUSINESS REPORT
-```
+The project uses **Google ADK** for agent architecture and **Gemini** for AI-based reasoning and orchestration.
+
+Gemini is primarily responsible for:
+- Understanding business requests
+- Coordinating agent workflows
+- Interpreting analytical outputs
+- Generating natural-language explanations
+- Supporting business-oriented reasoning
+
+The system does not rely on Gemini to independently calculate core numerical business metrics.
 
 ---
 
-## Role of Gemini ADK
+## Machine Learning Pipeline
 
-Google ADK provides the agent orchestration and conversational layer.
+The Performance Agent uses a trained Random Forest model for historical performance prediction.
 
-Gemini-powered agents are responsible for:
-
-1. Understanding the user's business request.
-2. Identifying the requested analysis.
-3. Collecting missing business information when required.
-4. Deciding which specialist agent should handle the request.
-5. Calling specialist agents through ADK `AgentTool`.
-6. Explaining structured analytical results in natural language.
-7. Presenting the final business report.
-
-The LLM is **not the source of truth for numerical analysis**.
-
-Python-based analysis is the source of truth for:
-
-* ML predictions
-* Class probabilities
-* Historical location metrics
-* Competitor counts
-* Ratings
-* Review statistics
-* Competition scores
-* Opportunity scores
-
-This separation keeps the analytical calculations deterministic and reduces the risk of the LLM inventing numerical results.
-
----
-
-## Machine Learning
-
-The project uses a **Random Forest classifier** trained on historical Zomato data.
-
-The model predicts a historical business performance class:
+The machine learning pipeline follows:
 
 ```text
-Low
-Medium
-High
-```
-
-The model also provides class probabilities.
-
-Example:
-
-```text
-High:   15.84%
-Medium: 50.48%
-Low:    33.68%
-```
-
-These probabilities represent the model's estimated class probabilities based on historical patterns.
-
-They should **not** be interpreted as guaranteed real-world business success probabilities.
-
-### ML Pipeline
-
-```text
-Historical Zomato Dataset
-          |
-          v
-     Data Cleaning
-          |
-          v
-   Feature Engineering
-          |
-          v
-     Train/Test Split
-          |
-          v
+Historical Business Dataset
+          │
+          ▼
+     Data Processing
+          │
+          ▼
       Preprocessing
-          |
-          v
+          │
+          ▼
    Random Forest Model
-          |
-          v
-    Performance Class
-     Low / Medium / High
+          │
+          ▼
+ Performance Prediction
+          │
+          ▼
+    SHAP Explanation
 ```
 
-### Model Files
-
-```text
-models/
-├── zomato_performance_model.pkl
-└── zomato_preprocessor.pkl
-```
-
-**zomato_performance_model.pkl**
-
-Contains the trained Random Forest model.
-
-**zomato_preprocessor.pkl**
-
-Contains the preprocessing pipeline used to transform input features before prediction.
+The model provides a historical performance signal that is then combined with competition and location information.
 
 ---
 
-## Model Performance
+## SHAP Explainability
 
-The baseline Random Forest model achieved approximately **87% test accuracy** on the current dataset.
+The project uses **SHAP (SHapley Additive exPlanations)** to explain the machine learning prediction.
 
-XGBoost was also evaluated as an alternative model, but Random Forest performed better on the current dataset.
+The SHAP pipeline uses the same preprocessing and trained model used by the prediction system.
 
-Model performance should be interpreted in the context of the historical dataset and evaluation setup rather than as a guarantee of future business performance.
+The explanation identifies:
+- Important features
+- Contribution values
+- Direction of contribution
+- Relative importance of features for the prediction
+
+**Example output structure:**
+
+```json
+{
+    "feature": "feature_name",
+    "contribution": 0.1234,
+    "direction": "positive"
+}
+```
+
+- A **positive SHAP contribution** means the feature contributed toward the predicted class.
+- A **negative contribution** means the feature contributed away from the predicted class.
+
+> **Important:** A positive SHAP contribution does not automatically mean that the feature is good for the business. It means that the feature contributed toward the model's predicted class.
 
 ---
 
-## Historical Location Analysis
+## Location Intelligence
 
-The Location Agent uses processed Zomato data to retrieve location-level historical characteristics.
+Location analysis provides contextual information about the selected business location.
 
-The analysis can include:
+The location component is designed to support questions such as:
+- Where is the proposed business located?
+- What location context is available?
+- How does the location connect with nearby competition?
+- What geographic information can support the business analysis?
 
-* Historical restaurant count
-* Median cost for two
-* Online ordering rate
-* Table-booking rate
-* Cuisine diversity
-* Business-type diversity
-
-Example:
-
-```text
-Indiranagar, Bengaluru
-        |
-        v
-Processed Zomato Data
-        |
-        v
-Location-level Features
-        |
-        v
-Historical Location Context
-```
-
-The system normalizes location names so that users can provide locations naturally, such as:
-
-* Whitefield, Bengaluru
-* Brookfield, Bengaluru
-* Indiranagar, Bengaluru
-* Koramangala, Bengaluru
-
-If a requested location is not available in the historical dataset, the system reports that historical data was not found instead of inventing values.
+Location information is also used by the competition analysis and dashboard map.
 
 ---
 
-## Automatic Location Resolution
+## Competition Intelligence
 
-For live Google Places operations, users do not need to provide latitude and longitude in normal usage.
+The system uses Google Places to retrieve live information about nearby businesses.
 
-For example:
-
-> I want to open a bakery in Indiranagar, Bengaluru.
-
-The system can resolve the location through Google Places:
+The competition workflow is:
 
 ```text
-Indiranagar, Bengaluru
-        |
-        v
-Google Places API
-        |
-        v
-Latitude + Longitude
+Business Location
+       │
+       ▼
+Google Places
+       │
+       ▼
+Nearby Businesses
+       │
+       ▼
+Competitor Filtering
+       │
+       ▼
+Competition Analysis
+       │
+       ▼
+Dashboard Map + Table
 ```
 
-The resolved coordinates can then be used for nearby competition searches.
+The dashboard displays real competitor information including:
+- Business name
+- Rating
+- Review count
+- Category
+- Geographic location
+
+The map distinguishes the target business location from nearby competitor locations.
 
 ---
 
-## Google Places Competition Analysis
+## Financial Simulation
 
-The Competition Agent uses the Google Places API to discover nearby candidate businesses.
+The project contains a deterministic financial simulation engine.
 
-Retrieved information can include:
+The simulator estimates:
+- Monthly customers
+- Monthly revenue
+- Food cost
+- Fixed costs
+- Monthly expenses
+- Estimated operating profit
+- Operating profit margin
+- Break-even customers per day
 
-* Business name
-* Rating
-* Review count
-* Address
-* Business types
-* Location
-* Place ID
-* Price level where available
+The calculations are performed using Python rather than generated by the LLM.
 
-The pipeline then applies Python-based relevance filtering.
+### Financial Model Formulas
 
-```text
-Google Places Candidates
-          |
-          v
-  Relevance Filtering
-          |
-          v
-Relevant Competitors
-          |
-          v
-Competition Statistics
-```
+- **Monthly Customers:**
+  $$\text{Monthly Customers} = \text{Customers Per Day} \times \text{Working Days}$$
 
-The filtering logic uses the project's supported Google Places business types. Competition categories should be interpreted according to the current implementation rather than assuming that every returned business is automatically a direct or indirect competitor.
+- **Monthly Revenue:**
+  $$\text{Monthly Revenue} = \text{Monthly Customers} \times \text{Average Order Value}$$
 
----
+- **Food Cost:**
+  $$\text{Food Cost} = \text{Monthly Revenue} \times \text{Food Cost Percentage}$$
 
-## Competition Analysis
+- **Fixed Costs:**
+  $$\text{Fixed Costs} = \text{Rent} + \text{Staff Cost} + \text{Utilities} + \text{Marketing} + \text{Other Expenses}$$
 
-The system calculates competition statistics from relevant competitors.
+- **Monthly Expenses:**
+  $$\text{Monthly Expenses} = \text{Fixed Costs} + \text{Food Cost}$$
 
-Examples include:
+- **Estimated Operating Profit:**
+  $$\text{Estimated Operating Profit} = \text{Monthly Revenue} - \text{Monthly Expenses}$$
 
-* Number of competitors retrieved
-* Average competitor rating
-* Median competitor rating
-* Average review count
-* Median review count
-* Highly rated competitor count
-* Highly reviewed competitor count
+- **Operating Profit Margin:**
+  $$\text{Operating Profit Margin} = \left(\frac{\text{Estimated Operating Profit}}{\text{Monthly Revenue}}\right) \times 100$$
 
-A competition strength score is calculated by the Python analysis engine.
+- **Break-Even:**
+  The simulator estimates break-even based on contribution per customer.
+  $$\text{Contribution Per Customer} = \text{Average Order Value} \times (1 - \text{Food Cost Percentage})$$
+  $$\text{Break-Even Customers Per Day} = \frac{\text{Fixed Costs}}{\text{Contribution Per Customer} \times \text{Working Days}}$$
 
-The current competition scoring logic uses project-defined thresholds and is an analytical indicator, not a guarantee of market difficulty.
+### Financial Model Disclaimer
 
----
+The financial simulator provides estimated operating-level calculations based on user-provided assumptions.
 
-## Opportunity Analysis
+It does not account for every possible real-world business expense.
 
-The Opportunity Agent combines:
+Examples of excluded factors may include:
+- Taxes
+- Loan interest
+- Depreciation
+- Payment gateway fees
+- Delivery platform commissions
+- Wastage
+- Maintenance
+- Owner drawings
+- Other business-specific expenses
 
-1. Historical ML performance probabilities
-2. Competition statistics
-
-The deterministic Python scoring engine produces:
-
-```text
-Opportunity Score
-Historical Performance Score
-Competition Strength Score
-```
-
-Example:
-
-```text
-Opportunity Score: 33.76
-Opportunity Class: Low
-
-Historical Performance: 41.08
-Competition Strength: 77.21
-```
-
-The Python analysis engine calculates these values.
-
-The Opportunity Agent explains the returned results but does not independently invent or modify the numerical values.
-
-### Opportunity Scoring Concept
-
-The current implementation gives:
-
-* Higher historical High/Medium performance probability → higher performance score.
-* Stronger competition → greater competition penalty.
-* The final opportunity score combines the performance and competition components.
-
-The exact thresholds and formulas are defined in the project's Python analysis code.
+Therefore, the output should be treated as a decision-support estimate, not as a guaranteed financial forecast.
 
 ---
 
-## End-to-End Example
+## What-If Analysis
 
-Suppose the user enters:
+The project includes a **What-If Analysis Engine** for comparing business scenarios.
 
-> I want to open a premium Japanese restaurant in Koramangala, Bengaluru.
-
-The user may provide:
+The goal is to allow a business owner to modify assumptions and understand how the projected results change.
 
 ```text
-Business type: Restaurant
-Primary cuisine: Japanese
-Cost for two: ₹1,800
-Online ordering: Yes
-Table booking: Yes
-Cuisine count: 3
-Restaurant type: Casual Dining
-Location: Koramangala, Bengaluru
+Current Scenario
+       │
+       ▼
+Change Assumptions
+       │
+       ▼
+What-If Scenario
+       │
+       ▼
+Compare Results
 ```
 
-### Step 1 — Coordinator
+### Financial What-If Analysis
 
-The Coordinator understands that the user wants a complete business analysis and identifies the required specialist analyses.
-
-### Step 2 — Location Agent
-
-The Location Agent retrieves historical location-level information from the processed Zomato dataset.
-
-### Step 3 — Performance Agent
-
-The Performance Agent uses the business inputs and historical location features with the Random Forest model.
-
-Example output:
+The financial What-If engine compares two sets of inputs:
 
 ```text
-Prediction: High
-
-High:   51.51%
-Medium: 42.83%
-Low:     5.67%
+Baseline Inputs               Scenario Inputs
+      │                             │
+      ▼                             ▼
+Financial Simulator           Financial Simulator
+      │                             │
+      ▼                             ▼
+Baseline Results              Scenario Results
 ```
 
-### Step 4 — Competition Agent
+The system then calculates:
+- Absolute change
+- Percentage change
+- Revenue change
+- Expense change
+- Operating profit change
+- Margin change
+- Break-even change
 
-The Competition Agent searches Google Places for relevant businesses around the requested location.
+Both scenarios pass through the same financial simulator. This prevents duplicated financial formulas inside the What-If logic.
 
-It filters the retrieved candidates and calculates competition statistics.
+### ML What-If Analysis
 
-Example:
+The ML What-If engine allows business inputs to be modified and compares the machine learning results.
+
+It calls the actual prediction pipeline for:
 
 ```text
-Competitors Retrieved: 16
-Average Rating: 4.15
-Median Rating: 4.30
-Average Reviews: 5140.75
-Median Reviews: 3104.5
-Highly Rated Competitors: 8
-Highly Reviewed Competitors: 11
+Baseline Inputs      Scenario Inputs
+      │                    │
+      ▼                    ▼
+  Prediction           Prediction
 ```
 
-### Step 5 — Opportunity Agent
+The comparison can include:
+- Baseline prediction
+- Scenario prediction
+- Baseline probabilities
+- Scenario probabilities
+- Probability changes
+- Prediction change
+- Optional SHAP comparison
 
-The Opportunity Agent receives the structured performance probabilities and competition summary and applies the project's deterministic opportunity-scoring logic.
-
-Example:
-
-```text
-Opportunity Score: 54.60
-Opportunity Class: Moderate
-
-Historical Performance: 78.34
-Competition Strength: 81.01
-```
-
-### Step 6 — Coordinator Final Report
-
-The Coordinator combines the returned results into a readable report containing:
-
-* Business overview
-* Location snapshot
-* Historical performance
-* Competition snapshot
-* Business opportunity
-* Key insights
-* Considerations
-
-The Coordinator preserves the numerical values returned by the analytical components rather than recalculating or inventing them.
+The What-If engine does not create a second ML model.
 
 ---
 
-## Project Architecture
+## Real-Time Analysis Pipeline
+
+The Streamlit application provides a live analysis pipeline during business analysis.
+
+The pipeline reflects actual backend execution:
+
+```text
+Coordinator
+   ↓
+Location
+   ↓
+Performance
+   ↓
+SHAP
+   ↓
+Competition
+   ↓
+Opportunity
+   ↓
+Financial Analysis
+   ↓
+Final Dashboard
+```
+
+The application does not use artificial delays to simulate progress. The displayed pipeline events are connected to the actual backend analysis flow.
+
+---
+
+## Streamlit Dashboard
+
+The final user-facing application is built using Streamlit.
+
+The dashboard is designed as a professional business intelligence interface rather than a default Streamlit application.
+
+```text
+Business Advisor
+│
+├── Overview
+├── Business Analysis
+├── Competition
+├── Financials
+└── What-If Analysis
+```
+
+### Dashboard Pages
+
+#### Overview
+The Overview page provides a high-level summary of the business analysis:
+- Performance summary
+- Opportunity assessment
+- Financial KPIs
+- Revenue information
+- Expense information
+- Operating profit
+- Break-even information
+- Business insights
+
+#### Business Analysis
+The Business Analysis page brings together the main analytical outputs:
+- Location Agent context
+- Performance Agent prediction
+- SHAP Explainability
+- Opportunity Agent score
+
+The page is designed to help a business owner understand the reasoning behind the analysis.
+
+#### Competition
+The Competition page displays nearby competitors retrieved using Google Places:
+- Competitor table
+- Ratings
+- Review counts
+- Categories
+- Geographic coordinates
+- Interactive map
+
+The map contains:
+```text
+Target Business
+        +
+Nearby Competitors
+```
+
+Competitor markers are based on real geographic coordinates returned by the competition analysis.
+
+#### Financials
+The Financials page displays the deterministic financial simulation:
+- Monthly Revenue
+- Monthly Expenses
+- Estimated Operating Profit
+- Operating Profit Margin
+- Break-Even Customers Per Day
+
+The page also uses charts to present the financial information in a business-friendly format.
+
+#### What-If Analysis
+The What-If page allows users to modify assumptions and compare them with the current scenario:
+
+```text
+Current Scenario
+        │
+        ▼
+Modify Inputs
+        │
+        ▼
+Run What-If
+        │
+        ▼
+Scenario Results
+```
+
+The dashboard displays:
+- Current value
+- What-If value
+- Absolute change
+- Percentage change
+
+Both financial and machine learning What-If analysis are supported.
+
+---
+
+## Project Structure
 
 ```text
 Business_Analysis_Agent/
 │
+├── app.py
+├── README.md
+├── requirements.txt
+├── .gitignore
+│
 ├── data/
-│   ├── raw/
-│   │   └── zomato.csv
-│   │
-│   └── processed/
-│       ├── zomato_cleaned.csv
-│       ├── zomato_train_engineered.csv
-│       └── zomato_test_engineered.csv
+│   └── ...
 │
 ├── models/
-│   ├── zomato_performance_model.pkl
-│   └── zomato_preprocessor.pkl
-│
-├── notebooks/
-│   ├── 01_zomato_exploration.ipynb
-│   ├── 02_zomato_cleaning.ipynb
-│   ├── 03_zomato_eda.ipynb
-│   ├── 04_zomato_feature_engineering.ipynb
-│   ├── 05_zomato_model_training.ipynb
-│   └── 06_google_places_competition.ipynb
+│   └── ...
 │
 ├── src/
+│   │
 │   ├── agent/
-│   │   ├── __init__.py
 │   │   ├── agent.py
+│   │   ├── competition_agent.py
 │   │   ├── coordinator_agent.py
 │   │   ├── location_agent.py
+│   │   ├── opportunity_agent.py
 │   │   ├── performance_agent.py
-│   │   ├── competition_agent.py
-│   │   └── opportunity_agent.py
+│   │   ├── test_competition_agent.py
+│   │   ├── test_location_agent.py
+│   │   ├── test_performance_agent.py
+│   │   └── test_opportunity_agent.py
 │   │
 │   ├── analysis/
-│   │   ├── __init__.py
 │   │   ├── location_context.py
-│   │   └── opportunity.py
+│   │   ├── opportunity.py
+│   │   └── what_if.py
+│   │
+│   ├── finance/
+│   │   ├── __init__.py
+│   │   └── simulator.py
 │   │
 │   ├── ml/
-│   │   ├── __init__.py
-│   │   └── predictor.py
+│   │   ├── predictor.py
+│   │   └── explainer.py
 │   │
 │   └── places/
-│       ├── __init__.py
 │       └── competition.py
 │
-├── .env
-├── .gitignore
-├── requirements.txt
-└── README.md
+└── tests/
+    ├── test_phase1_phase2.py
+    ├── test_adk_orchestration.py
+    ├── test_financial_simulator.py
+    └── test_what_if.py
 ```
 
 ---
 
-## Tech Stack
+## Technology Stack
 
-### AI / Agent
-
-* Google ADK
-* Gemini
-* ADK `AgentTool`
+### AI and Agent Framework
+- Google ADK
+- Google Gemini
 
 ### Machine Learning
+- Scikit-learn
+- Random Forest
+- SHAP
 
-* Python
-* Pandas
-* NumPy
-* Scikit-learn
-* Random Forest
+### Data Processing
+- Python
+- Pandas
+- NumPy
 
-### Data
+### External Data
+- Google Places API
 
-* Historical Zomato dataset
-* Engineered location-level features
+### Dashboard
+- Streamlit
+- Plotly
 
-### Live Data
-
-* Google Places API
+### Testing
+- Pytest
 
 ### Development
-
-* Python
-* Git
-* GitHub
-* VS Code
+- Git
+- GitHub
+- Python Virtual Environment
 
 ---
 
-## Setup
+## Installation
 
 ### 1. Clone the repository
-
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/Tanay-chaturvedi/Business_Analysis_Agent.git
+```
+
+### 2. Move into the project directory
+```bash
 cd Business_Analysis_Agent
 ```
 
-### 2. Create a virtual environment
-
+### 3. Create a virtual environment
 ```bash
 python -m venv .venv
 ```
 
-Activate it on Windows:
-
+### 4. Activate the virtual environment on Windows
 ```powershell
-.venv\Scripts\Activate.ps1
+.venv\Scripts\activate
 ```
 
-### 3. Install dependencies
-
+### 5. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
+---
+
+## Environment Variables
 
 Create a `.env` file in the project root:
 
 ```env
+GOOGLE_API_KEY=your_google_api_key
 GOOGLE_MAPS_API_KEY=your_google_places_api_key
-GOOGLE_API_KEY=your_gemini_api_key
 ```
 
-Do not commit `.env` to GitHub.
+Add any other required API credentials used by the project.
+
+> The `.env` file should not be committed to GitHub.
 
 ---
 
-## Running the Agent
+## Running the Streamlit Application
 
-Set the project root as the Python path.
+Start the main business advisor dashboard:
 
-### PowerShell
+```bash
+streamlit run app.py
+```
+
+The application will open in the browser. The Streamlit dashboard is the primary user-facing interface of the project.
+
+---
+
+## Running the ADK Application
+
+For development and agent testing, the Google ADK web interface can be started using:
 
 ```powershell
 $env:PYTHONPATH = (Get-Location).Path
-```
-
-Start the ADK application:
-
-```powershell
 adk web src
 ```
 
-Then open the ADK interface and provide a business request.
-
-Example:
-
-> I want to open a bakery in Indiranagar, Bengaluru.
-
-The Coordinator will determine the required information and delegate the appropriate analysis to the specialist agents.
+The ADK interface is mainly intended for agent development, debugging, and testing. The Streamlit application is the primary product interface.
 
 ---
 
-## Security
+## Testing
 
-The following files and directories should not be committed:
+The project contains automated tests covering the major analytical components.
 
-```text
-.env
-.venv/
-*.pkl
-data/raw/
-data/processed/
-__pycache__/
+Run the complete test suite:
+
+```bash
+pytest tests\ -v
 ```
 
-API keys should always be stored in environment variables.
+The Phase 1–4 test suite currently contains **73 tests**:
+
+The test coverage includes:
+- ADK orchestration
+- Multi-agent workflow
+- Location analysis
+- Performance analysis
+- Competition analysis
+- Opportunity analysis
+- SHAP explainability
+- Financial simulation
+- Financial validation
+- What-If financial analysis
+- What-If ML analysis
+
+The tests help ensure that new UI features do not break the underlying analytical logic.
+
+---
+
+## Example Business Input
+
+A business owner can provide information such as:
+
+- **Business Type:** Restaurant
+- **Location:** Koramangala, Bengaluru
+- **Cuisine:** South Indian
+- **Expected Customers Per Day:** 150
+- **Average Order Value:** ₹300
+- **Working Days:** 30
+- **Food Cost:** 30%
+- **Rent:** ₹100,000
+- **Staff Cost:** ₹150,000
+- **Utilities:** ₹25,000
+- **Marketing:** ₹20,000
+
+The system can then process the information through the relevant analytical components.
+
+---
+
+## End-to-End Workflow
+
+```text
+                    BUSINESS OWNER
+                           │
+                           ▼
+                    STREAMLIT APP
+                           │
+                           ▼
+                  ENTER BUSINESS INPUTS
+                           │
+                           ▼
+                  ANALYZE BUSINESS
+                           │
+                           ▼
+                    COORDINATOR
+                           │
+          ┌────────────────┼────────────────┐
+          ▼                ▼                ▼
+      LOCATION        PERFORMANCE      COMPETITION
+          │                │                │
+          │                ▼                │
+          │              SHAP               │
+          │                │                │
+          └────────────────┼────────────────┘
+                           ▼
+                     OPPORTUNITY
+                           │
+                           ▼
+                      FINANCIALS
+                           │
+                           ▼
+                    FINAL DASHBOARD
+                           │
+                           ▼
+                    WHAT-IF ANALYSIS
+                           │
+                           ▼
+                 CURRENT vs SCENARIO
+```
+
+---
+
+## Testing and Validation
+
+The project follows a layered testing strategy.
+
+- **Agent Testing:** Individual agents have dedicated tests to verify that they can operate independently.
+- **Orchestration Testing:** The coordinator workflow is tested to ensure the required agents execute in the correct order.
+- **Financial Testing:** The financial simulator is tested for:
+  - Correct calculations
+  - Zero revenue scenarios
+  - Zero contribution scenarios
+  - Invalid input values
+  - Expense validation
+  - Break-even calculations
+- **What-If Testing:** The What-If engine is tested for:
+  - Financial scenario comparison
+  - ML scenario comparison
+  - Probability changes
+  - Prediction changes
+  - Zero-baseline handling
+  - SHAP comparison
+
+---
+
+## Design Principles
+
+The project follows several core design principles:
+
+### 1. Separation of Responsibilities
+Each component has a clear responsibility:
+
+```text
+Agents                  → Orchestration
+Machine Learning        → Prediction
+SHAP                    → Explainability
+Google Places           → Live Competition Data
+Python Financial Engine → Deterministic Calculations
+Streamlit               → Presentation
+```
+
+### 2. Deterministic Numerical Analysis
+Financial calculations are implemented using Python functions instead of relying on LLM-generated arithmetic.
+
+This makes the calculations:
+- Reproducible
+- Testable
+- Consistent
+- Easier to validate
+
+### 3. Real External Data
+Competition information is retrieved from Google Places rather than being manually invented. This allows the competition section to reflect live external business information.
+
+### 4. Explainable Machine Learning
+The machine learning system uses SHAP to provide feature-level explanations instead of treating the model as a black box.
+
+### 5. Modular Architecture
+The system is divided into independent modules so that components can be tested and improved without rewriting the entire application.
 
 ---
 
 ## Limitations
 
-The system should be treated as a **decision-support tool**, not a guaranteed business forecasting system.
+The system is designed as a business decision-support platform, not as a guarantee of business success.
 
-Limitations include:
-
-* Historical Zomato data may not represent current market conditions.
-* Google Places results depend on live API availability and returned search results.
-* Competitor relevance depends on available business types and filtering logic.
-* ML predictions reflect patterns in the training dataset.
-* Opportunity scores are analytical indicators and are not guarantees of profitability.
-* Actual business success also depends on factors outside the system, such as rent, location visibility, operations, marketing, product quality, and execution.
+Important limitations include:
+- Historical data may not perfectly represent future business performance.
+- Google Places data depends on external API availability and returned results.
+- Financial outputs depend heavily on user-provided assumptions.
+- The financial simulator does not model every real-world expense.
+- Machine learning predictions are dependent on the training dataset and feature quality.
+- SHAP explains model behavior but does not establish real-world causation.
+- Opportunity analysis should be interpreted as analytical guidance rather than certainty.
 
 ---
 
-## Future Improvements
+## Future Enhancements
 
 Potential future improvements include:
-
-* Web-based business analysis dashboard
-* More extensive feature engineering
-* Hyperparameter tuning
-* Cross-validation
-* Additional model comparison
-* Competitor distance analysis
-* Competitor price-level analysis
-* Historical trend analysis
-* More detailed location intelligence
-* Automated business report generation
-* Visualization of competition density
-* More robust structured handoff between specialist agents
-* Model fallback handling for temporary LLM availability errors
+- Customer segmentation
+- Demand forecasting
+- Time-series revenue forecasting
+- More detailed competitor analysis
+- Customer review sentiment analysis
+- Google Maps integration enhancements
+- Automated market reports
+- PDF business reports
+- Cloud deployment
+- Authentication
+- Persistent business profiles
+- Database integration
+- Business performance tracking over time
+- Advanced scenario simulation
+- Additional financial metrics
+- More machine learning models
 
 ---
 
 ## Project Objective
 
-The goal of this project is not to guarantee whether a business will succeed.
+The objective of the project is to build an AI-powered business advisory system that can help business owners analyze a potential business opportunity using multiple sources of information.
 
-Instead, it provides a **data-driven decision-support system** that combines:
+Instead of relying on a single AI response, the platform combines:
 
 ```text
-Historical Business Data
-        +
+AI Reasoning
+     +
 Machine Learning
-        +
+     +
+Explainable AI
+     +
 Live Competition Data
-        +
-AI-powered Orchestration and Explanation
-        |
-        v
-Business Opportunity Analysis
+     +
+Financial Modeling
+     +
+Scenario Analysis
 ```
 
-The system helps users evaluate potential food and restaurant business opportunities using historical data, ML-based performance signals, live competition information, and AI-powered explanations.
+This creates a structured decision-support workflow for evaluating business opportunities.
 
 ---
 
 ## Key Design Principle
 
-The core architecture separates **AI orchestration** from **numerical analysis**:
+The core architecture separates AI orchestration from numerical analysis:
 
 > **Gemini understands and orchestrates. Python calculates. Google Places provides live competition data. Machine Learning provides historical performance predictions.**
 
@@ -792,6 +949,12 @@ This makes the system more reliable because the LLM is not responsible for inven
 
 ## Author
 
-**Tanay Chaturvedi**
+**Tanay Chaturvedi**  
+B.Tech — Artificial Intelligence & Machine Learning  
+CMR Institute of Technology, Bengaluru  
 
-AI / Machine Learning / Data Analytics Project
+---
+
+## License
+
+This project is developed for educational, demonstration, and portfolio purposes.
