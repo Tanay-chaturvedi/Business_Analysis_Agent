@@ -14,11 +14,11 @@ def analyze_business_opportunity(probabilities, model_classes, competition_summa
     + low_probability * 20
 )       #took full weight of high probability as it shows strongest signal
 
-    competitor_count = competition_summary["competitor_count_retrieved"]
-    avg_rating = competition_summary["avg_competitor_rating"]
-    avg_reviews = competition_summary["avg_competitor_reviews"]
-    high_rating_count = competition_summary["high_rating_competitors"]
-    high_review_count = competition_summary["high_review_competitors"]
+    competitor_count = competition_summary.get("competitor_count_retrieved", 0)
+    avg_rating = competition_summary.get("avg_competitor_rating", 0)
+    avg_reviews = competition_summary.get("avg_competitor_reviews", 0)
+    high_rating_count = competition_summary.get("high_rating_competitors", 0)
+    high_review_count = competition_summary.get("high_review_competitors", 0)
 
 
     if competitor_count > 0:
