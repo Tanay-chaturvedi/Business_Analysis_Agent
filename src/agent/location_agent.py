@@ -1,14 +1,18 @@
 from google.adk.agents import Agent
+from google.adk.tools import ToolContext
 from src.analysis.location_context import get_location_context
 
 
-def location_analysis_tool(location: str) -> dict:
+def location_analysis_tool(location: str, tool_context: ToolContext = None) -> dict:
     """
     Retrieve historical business context for a location
     from the Zomato dataset.
     """
 
     result = get_location_context(location)
+
+    if tool_context and hasattr(tool_context, "state"):
+        tool_context.state["location_result"] = result
 
     return result
 

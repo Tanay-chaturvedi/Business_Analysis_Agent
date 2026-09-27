@@ -1,10 +1,144 @@
 from google.adk.agents import Agent
+from google.adk.tools import ToolContext
 from google.adk.tools.agent_tool import AgentTool    #AgentTool basically ek agent ko doosre agent ke liye callable tool bana deta hai.
 
 from src.agent.competition_agent import competition_agent
 from src.agent.location_agent import location_agent
 from src.agent.performance_agent import performance_agent
 from src.agent.opportunity_agent import opportunity_agent
+
+# Import the underlying tool functions directly so that the full-analysis
+# orchestrator can call them in a guaranteed order from Python — not via
+# LLM prompt instructions that only express a preference, not a hard constraint.
+from src.agent.location_agent import location_analysis_tool
+from src.agent.performance_agent import performance_analysis_tool
+from src.agent.competition_agent import competition_analysis_tool
+from src.agent.opportunity_agent import opportunity_analysis_tool
+
+
+def run_full_business_analysis(
+    location: str,
+    search_query: str,
+    online_order: int = 1,
+    book_table: int = 0,
+    approx_costfor_two_people: float = 800.0,
+    cost_band: str = "Medium",
+    primary_cuisine: str = "North Indian",
+    cuisine_count: int = 2,
+    primary_rest_type: str = "Casual Dining",
+    radius_km: float = 3.0,
+    max_results: int = 20,
+    tool_context: ToolContext = None,
+    progress_callback = None
+) -> dict:
+    """
+    Orchestrate a full business analysis in guaranteed order:
+
+        Step 1 – Location context (historical data for the target location)
+        Step 2 – Performance prediction (ML model + SHAP)
+        Step 3 – Competition analysis (Google Places)
+        Step 4 – Opportunity analysis (requires ACTUAL Performance and
+                  Competition outputs — runs only after they exist)
+
+    Opportunity cannot execute before Performance and Competition because
+    this function passes their actual return values as arguments.
+
+    This tool preserves independent agent usage:
+    - Use location_agent for location-only requests.
+    - Use performance_agent for performance-only requests.
+    - Use competition_agent for competition-only requests.
+    - Use opportunity_agent when Performance and Competition data are
+      already available.
+    - Use this tool ONLY when a complete end-to-end analysis is required.
+    """
+    if progress_callback:
+        progress_callback("coordinator", "started", "Orchestrating specialist analysis")
+
+    # ------------------------------------------------------------------ #
+    # Step 1: Location context                                             #
+    # ------------------------------------------------------------------ #
+    if progress_callback:
+        progress_callback("location", "started", "Retrieving location context...")
+
+    location_result = location_analysis_tool(
+        location=location,
+        tool_context=tool_context
+    )
+
+    if progress_callback:
+        progress_callback("location", "completed", "Location context retrieved")
+
+    # ------------------------------------------------------------------ #
+    # Step 2: Performance prediction                                        #
+    # Location context is read from tool_context.state by the tool if     #
+    # historical_restaurant_count / location_median_cost are not passed.   #
+    # ------------------------------------------------------------------ #
+    perf_kwargs = dict(
+        online_order=online_order,
+        book_table=book_table,
+        approx_costfor_two_people=approx_costfor_two_people,
+        cost_band=cost_band,
+        location=location,
+        primary_cuisine=primary_cuisine,
+        cuisine_count=cuisine_count,
+        primary_rest_type=primary_rest_type,
+        tool_context=tool_context,
+    )
+    if progress_callback:
+        perf_kwargs["progress_callback"] = progress_callback
+
+    performance_result = performance_analysis_tool(**perf_kwargs)
+
+    # ------------------------------------------------------------------ #
+    # Step 3: Competition analysis                                          #
+    # business_type is always "restaurant" for food businesses.            #
+    # ------------------------------------------------------------------ #
+    if progress_callback:
+        progress_callback("competition", "started", "Retrieving nearby competitors...")
+
+    competition_result = competition_analysis_tool(
+        location=location,
+        search_query=search_query,
+        business_type="restaurant",
+        radius_km=radius_km,
+        max_results=max_results,
+        tool_context=tool_context
+    )
+
+    if progress_callback:
+        comp_count = competition_result.get("competitor_count", 0)
+        progress_callback("competition", "completed", f"{comp_count} competitors found")
+
+    # ------------------------------------------------------------------ #
+    # Step 4: Opportunity analysis                                          #
+    # Opportunity receives the ACTUAL outputs of Steps 2 and 3.            #
+    # It cannot reach this line before Steps 2 and 3 have returned.        #
+    # ------------------------------------------------------------------ #
+    if progress_callback:
+        progress_callback("opportunity", "started", "Combining performance and competition signals...")
+
+    prob_dict = performance_result["probabilities"]
+    competition_summary = competition_result["competition_summary"]
+
+    opportunity_result = opportunity_analysis_tool(
+        probabilities=prob_dict,
+        model_classes=list(prob_dict.keys()),
+        competition_summary=competition_summary,
+        tool_context=tool_context
+    )
+
+    if progress_callback:
+        progress_callback("opportunity", "completed", "Opportunity assessment completed")
+
+    if progress_callback:
+        progress_callback("coordinator", "completed", "Orchestration completed")
+
+    return {
+        "location_result": location_result,
+        "performance_result": performance_result,
+        "competition_result": competition_result,
+        "opportunity_result": opportunity_result,
+    }
 
 
 coordinator_agent = Agent(
@@ -53,9 +187,10 @@ Responsibility:
 - Random Forest historical performance prediction
 - Prediction class
 - ML probabilities
+- SHAP feature explainability (top feature contributions and positive/negative directions)
 
 The Performance Agent is the ONLY source of truth for historical
-ML performance predictions and probabilities.
+ML performance predictions, probabilities, and SHAP feature explanations.
 
 
 3. COMPETITION AGENT
@@ -126,6 +261,12 @@ Responsibility:
 The Opportunity Agent is the ONLY source of truth for opportunity
 scores and classifications.
 
+IMPORTANT: The Opportunity Agent tool validates that both
+Performance and Competition outputs are present. It will raise
+an error if they are missing. Never call opportunity_agent
+before obtaining real outputs from performance_agent and
+competition_agent.
+
 
 ==================================================
 INTENT-BASED DELEGATION
@@ -189,18 +330,26 @@ Never invent missing inputs.
 
 FULL BUSINESS ANALYSIS
 
-If the user requests a complete business analysis, obtain:
+If the user requests a complete business analysis, call:
 
-1. Location context
-2. Historical performance prediction
-3. Competition analysis
-4. Opportunity analysis
+    run_full_business_analysis
 
-The Opportunity Agent must receive the ACTUAL structured outputs
-from the Performance Agent and Competition Agent.
+This is the ONLY tool that guarantees the correct execution
+order:
 
-Do not invent, estimate, summarize, or manually reconstruct these
-inputs.
+    Location → Performance → Competition → Opportunity
+
+Do NOT call opportunity_agent individually during a full analysis.
+The run_full_business_analysis tool handles the entire sequence
+and returns all four results in a single response.
+
+Provide run_full_business_analysis with:
+- location: the target location
+- search_query: include cuisine + location
+  (e.g. "Japanese restaurants in Koramangala, Bengaluru")
+- online_order, book_table, approx_costfor_two_people, cost_band,
+  primary_cuisine, cuisine_count, primary_rest_type as provided
+  by the user
 
 
 ==================================================
@@ -247,26 +396,20 @@ do not substitute another value or guess.
 SEQUENCING FOR FULL ANALYSIS
 ==================================================
 
-For a full business analysis, do NOT call opportunity_agent before
-the Performance Agent and Competition Agent have returned their
-actual outputs.
+For a full business analysis, use run_full_business_analysis.
 
-The required logical flow is:
+This tool enforces the required execution order in Python code,
+not in prompts:
 
-1. Obtain location analysis.
-2. Obtain performance analysis.
-3. Obtain competition analysis.
-4. Collect the actual Performance Agent output.
-5. Collect the actual Competition Agent output.
-6. Pass the required structured values to opportunity_agent.
-7. Receive the Opportunity Agent result.
-8. Synthesize the final response.
+1. Location analysis executes first.
+2. Performance analysis executes second.
+3. Competition analysis executes third.
+4. Opportunity analysis executes last — receiving the ACTUAL
+   return values from steps 2 and 3.
 
-The Opportunity Agent depends on the outputs of the Performance
-and Competition Agents.
-
-Never assume that an agent's output exists before it has actually
-been returned.
+The Opportunity step cannot run before Performance and Competition
+because run_full_business_analysis passes their actual return
+values as arguments.
 
 
 ==================================================
@@ -621,7 +764,8 @@ Your role is:
 6. Explain the results clearly.
 7. Produce a concise, descriptive, user-friendly business analysis.
 
-For full business analysis, ensure that:
+For full business analysis, use run_full_business_analysis which
+enforces the required execution order in Python code:
 
 - Location Agent receives the actual target location.
 - Performance Agent receives the required business inputs and
@@ -631,7 +775,7 @@ For full business analysis, ensure that:
 - Cuisine is incorporated into the competition search query when
   relevant.
 - Opportunity Agent receives the actual structured Performance
-  and Competition outputs.
+  and Competition outputs — guaranteed by Python, not by prompt.
 
 The final response should feel like a professional business
 analysis prepared for a business owner, while remaining faithful
@@ -643,5 +787,6 @@ to the actual data and calculations produced by the system.
         AgentTool(agent=performance_agent),
         AgentTool(agent=competition_agent),
         AgentTool(agent=opportunity_agent),
+        run_full_business_analysis,
     ],
 )

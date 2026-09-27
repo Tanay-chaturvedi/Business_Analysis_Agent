@@ -1,4 +1,5 @@
 from google.adk.agents import Agent
+from google.adk.tools import ToolContext
 
 from src.places.competition import (
     resolve_location_coordinates,
@@ -13,11 +14,11 @@ def competition_analysis_tool(
     search_query: str,
     business_type: str,
     radius_km: float = 3,
-    max_results: int = 20
+    max_results: int = 20,
+    tool_context: ToolContext = None
 ) -> dict:
 
-    # Step 1: Resolve human-readable location
-    # into latitude and longitude
+    # Step 1: Resolve human-readable location into latitude and longitude
     latitude, longitude = resolve_location_coordinates(
         location
     )
@@ -60,10 +61,19 @@ def competition_analysis_tool(
             ].fillna("").to_dict(orient="records")
         )
 
-    return {
+    result = {
+        "location": location,
+        "latitude": latitude,
+        "longitude": longitude,
         "competition_summary": summary,
         "competitors": competitors
     }
+
+    if tool_context and hasattr(tool_context, "state"):
+        tool_context.state["competition_result"] = summary
+        tool_context.state["full_competition_result"] = result
+
+    return result
 
 
 competition_agent = Agent(
@@ -172,21 +182,10 @@ When presenting the results, include:
 IMPORTANT:
 
 The Python tool performs the actual calculations and analysis.
-
 You are responsible only for interpreting and presenting
 its output.
 
 Never replace tool-derived values with your own calculations.
-
-If the tool returns 16 competitors, report 16.
-
-If the tool returns an average rating of 4.15,
-report 4.15.
-
-If the tool returns 11 high-review competitors,
-report 11.
-
-Do not calculate these values yourself.
 """,
 
     tools=[competition_analysis_tool]
