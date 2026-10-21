@@ -202,10 +202,16 @@ def compare_financial_scenarios(
             scenario_result.get(key),
         )
 
+    has_changes = any(
+        v.get("absolute") is not None and abs(v.get("absolute")) > 1e-4
+        for v in changes.values()
+    )
+
     return {
         "baseline": baseline_result,
         "scenario": scenario_result,
         "changes": changes,
+        "has_financial_changes": has_changes,
     }
 
 

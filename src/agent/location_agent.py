@@ -1,6 +1,7 @@
 from google.adk.agents import Agent
 from google.adk.tools import ToolContext
 from src.analysis.location_context import get_location_context
+from src.agent.llm_config import PRIMARY_MODEL_NAME
 
 
 def location_analysis_tool(location: str, tool_context: ToolContext = None) -> dict:
@@ -19,7 +20,7 @@ def location_analysis_tool(location: str, tool_context: ToolContext = None) -> d
 
 location_agent = Agent(
     name="location_agent",
-    model="gemini-3.6-flash",
+    model=PRIMARY_MODEL_NAME,
 
     description=(
         "Specialized agent responsible for retrieving "

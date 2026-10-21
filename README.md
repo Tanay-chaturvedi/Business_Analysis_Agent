@@ -1,960 +1,353 @@
-# AI Business Advisory Agent
+# BizAdvisor — AI Business Advisory Agent
 
-An AI-powered **business intelligence and decision-support platform** for evaluating food and restaurant business opportunities using **Google ADK, Gemini, Machine Learning, SHAP Explainability, historical Zomato data, live Google Places data, deterministic financial modeling, and What-If scenario analysis**.
-
-The system combines a **multi-agent backend** with a professional **Streamlit dashboard**, allowing a business owner to move from a business idea to structured market, performance, competition, opportunity, and financial analysis from a single interface.
-
-> **Core Principle:** Gemini orchestrates and explains. Python performs deterministic analysis. Machine Learning provides historical performance signals. Google Places provides live competition data.
+An enterprise-grade, full-stack **Business Advisory Agent** and decision-support platform designed to evaluate restaurant and hospitality business ventures. BizAdvisor integrates **Google ADK multi-agent orchestration**, a **Random Forest machine learning model**, **SHAP explainability**, live **Google Places competitor intelligence**, an assumption-driven **financial simulator**, and interactive **What-If scenario analysis** with a modern **React 19** frontend and a secured **FastAPI / MySQL** backend.
 
 ---
 
-## Key Features
+## 1. Key Features
 
-- **Multi-Agent Business Analysis**
-- **Google ADK orchestration**
-- **Gemini-powered reasoning and coordination**
-- **Location Intelligence**
-- **Historical business performance prediction**
-- **Random Forest Machine Learning model**
-- **SHAP Explainability**
-- **Live Google Places competition analysis**
-- **Opportunity assessment**
-- **Financial simulation**
-- **Break-even analysis**
-- **Revenue and expense estimation**
-- **Financial What-If Analysis**
-- **ML What-If Analysis**
-- **Real-time analysis pipeline**
-- **Professional Streamlit dashboard**
-- **Automated test suite**
-- **Deterministic numerical calculations**
+* **Conversational Business Advisory:** Interactive AI chat experience that extracts business concepts (location, cuisine, cost for two, dining type) and provides structured feasibility reports.
+* **Google ADK Multi-Agent Orchestration:** Specialized agents (Coordinator, Location, Performance, Competition, and Opportunity) orchestrated via Google Agent Development Kit (ADK) with flexible LLM providers (Groq / Gemini / OpenAI compatible).
+* **Machine Learning Performance Prediction:** Pre-trained Random Forest classifier estimating restaurant performance category and success probability based on historical market trends.
+* **SHAP Explainability:** TreeExplainer-driven feature attribution showing top positive and negative contributors behind each performance prediction.
+* **Google Places Competitor Discovery:** Live nearby competitor discovery capturing business names, ratings, review counts, price levels, and coordinates with deterministic fallback logic.
+* **Location Intelligence:** Geospatial context evaluating historical restaurant density, median spend, cuisine diversity, and online ordering adoption.
+* **Deterministic Financial Simulator:** Transparent revenue, variable expense, itemized fixed costs, operating profit (EBITDA proxy), margin, and contribution-margin break-even analysis with editable assumption sliders.
+* **What-If Scenario Simulator:** Dynamic comparative scenario modeling allowing entrepreneurs to simulate changes in cost for two, table booking, or online ordering before committing capital.
+* **Enterprise Security & Authentication:** User registration and login powered by Argon2id password hashing, signed JWT bearer tokens with strict configuration validation, IP rate-limiting on sensitive auth routes (`slowapi`), and strict CORS controls.
+* **User-Scoped Conversation Persistence:** Persistent conversation and message history stored in MySQL with foreign key cascading and strict ownership enforcement preventing cross-user data leakage.
 
 ---
 
-## System Architecture
+## 2. Technology Stack
 
-```text
-                         USER
-                           │
-                           ▼
-                    COORDINATOR
-                       AGENT
-                           │
-          ┌────────────────┼────────────────┐
-          ▼                ▼                ▼
-      LOCATION        PERFORMANCE      COMPETITION
-       AGENT             AGENT            AGENT
-          │                │                │
-          └────────────────┼────────────────┘
-                           ▼
-                    OPPORTUNITY
-                       AGENT
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-          FINANCIAL     WHAT-IF        SHAP
-          SIMULATOR     ANALYSIS   EXPLAINABILITY
-              │            │            │
-              └────────────┼────────────┘
-                           ▼
-                     FINAL REPORT
-                           │
-                 ┌─────────┴─────────┐
-                 ▼                   ▼
-              Dashboard          Map / Charts
-```
+### Frontend
+* **Framework:** React 19 (Single Page Application)
+* **Build Tool:** Vite
+* **Styling:** Tailwind CSS / Vanilla CSS with glassmorphism, responsive grid layouts, and dark/light modes
+* **Icons:** Lucide React
+* **HTTP Client:** Native Fetch / Custom API Service with bearer token authorization
 
-The architecture separates AI orchestration, machine learning, live external data, and deterministic numerical calculations.
+### Backend & API
+* **Web Framework:** FastAPI (ASGI)
+* **Server:** Uvicorn
+* **Data Validation:** Pydantic v2
+* **Authentication:** PyJWT (HS256 tokens) & Argon2id (`argon2-cffi`)
+* **Rate Limiting:** SlowAPI (Redis / In-memory token bucket)
+* **Agent Framework:** Google ADK (`google-adk`), Google GenAI (`google-genai`), and LiteLLM (`litellm`)
+
+### Database & Persistence
+* **Relational Database:** MySQL 8.0+
+* **ORM:** SQLAlchemy 2.0+
+* **Driver:** PyMySQL
+
+### Machine Learning & Data Science
+* **Classifier:** Scikit-Learn (Random Forest Classifier) & XGBoost
+* **Explainability:** SHAP (TreeExplainer)
+* **Data Processing:** Pandas, NumPy, Scipy, Joblib
+* **Spatial & Geometry:** GeoPandas, Shapely, OSMnx
 
 ---
 
-## Multi-Agent Architecture
-
-The system uses a coordinator-based architecture where specialized agents handle different aspects of business analysis.
-
-### 1. Coordinator Agent
-
-The Coordinator Agent manages the complete business analysis workflow.
-
-**Responsibilities:**
-- Coordinates specialist agents
-- Controls execution order
-- Passes outputs between agents
-- Combines analysis results
-- Produces the final business analysis state
-
-The full analysis follows this sequence:
-
-```text
-Coordinator
-     │
-     ├── Location Agent
-     │
-     ├── Performance Agent
-     │       └── Random Forest
-     │       └── SHAP Explainer
-     │
-     ├── Competition Agent
-     │       └── Google Places
-     │
-     └── Opportunity Agent
-             └── Performance + Competition
-```
-
-### 2. Location Agent
-
-The Location Agent analyzes the selected business location.
-
-It provides location-related context that can be used by the other analytical components.
-
-The location analysis is designed to work independently as well as part of the complete coordinated workflow.
-
-### 3. Performance Agent
-
-The Performance Agent uses the trained machine learning model to estimate historical business performance.
-
-The current implementation uses a **Random Forest classifier**.
-
-The agent provides:
-- Predicted performance class
-- Class probabilities
-- Performance-related business signals
-- SHAP-based feature explanations
-
-The prediction is generated by the actual trained model rather than by an LLM-generated estimate.
-
-### 4. Competition Agent
-
-The Competition Agent retrieves live nearby business information using Google Places.
-
-It provides information such as:
-- Nearby competitors
-- Business names
-- Ratings
-- Review counts
-- Categories
-- Geographic coordinates
-- Competition context
-
-This allows the system to combine historical business data with current local competition information.
-
-### 5. Opportunity Agent
-
-The Opportunity Agent combines business performance signals and competition information to produce an opportunity assessment.
-
-It uses the outputs from:
-
-```text
-Performance Analysis
-        +
-Competition Analysis
-        ↓
-Opportunity Assessment
-```
-
-The Opportunity Agent does not independently invent the underlying numerical data.
-
----
-
-## Intent-Based Execution
-
-The system supports both individual specialist analysis and full coordinated analysis.
-
-For example:
-
-```text
-Location-only request
-        ↓
-Location Agent
-
-Performance-only request
-        ↓
-Performance Agent
-
-Competition-only request
-        ↓
-Competition Agent
-
-Opportunity request
-        ↓
-Opportunity Agent
-
-Full business analysis
-        ↓
-Coordinator Agent
-        ↓
-All required specialist agents
-```
-
-This allows individual agents to remain independently callable while also supporting a complete end-to-end workflow.
-
----
-
-## Gemini and Google ADK
-
-The project uses **Google ADK** for agent architecture and **Gemini** for AI-based reasoning and orchestration.
-
-Gemini is primarily responsible for:
-- Understanding business requests
-- Coordinating agent workflows
-- Interpreting analytical outputs
-- Generating natural-language explanations
-- Supporting business-oriented reasoning
-
-The system does not rely on Gemini to independently calculate core numerical business metrics.
-
----
-
-## Machine Learning Pipeline
-
-The Performance Agent uses a trained Random Forest model for historical performance prediction.
-
-The machine learning pipeline follows:
-
-```text
-Historical Business Dataset
-          │
-          ▼
-     Data Processing
-          │
-          ▼
-      Preprocessing
-          │
-          ▼
-   Random Forest Model
-          │
-          ▼
- Performance Prediction
-          │
-          ▼
-    SHAP Explanation
-```
-
-The model provides a historical performance signal that is then combined with competition and location information.
-
----
-
-## SHAP Explainability
-
-The project uses **SHAP (SHapley Additive exPlanations)** to explain the machine learning prediction.
-
-The SHAP pipeline uses the same preprocessing and trained model used by the prediction system.
-
-The explanation identifies:
-- Important features
-- Contribution values
-- Direction of contribution
-- Relative importance of features for the prediction
-
-**Example output structure:**
-
-```json
-{
-    "feature": "feature_name",
-    "contribution": 0.1234,
-    "direction": "positive"
-}
-```
-
-- A **positive SHAP contribution** means the feature contributed toward the predicted class.
-- A **negative contribution** means the feature contributed away from the predicted class.
-
-> **Important:** A positive SHAP contribution does not automatically mean that the feature is good for the business. It means that the feature contributed toward the model's predicted class.
-
----
-
-## Location Intelligence
-
-Location analysis provides contextual information about the selected business location.
-
-The location component is designed to support questions such as:
-- Where is the proposed business located?
-- What location context is available?
-- How does the location connect with nearby competition?
-- What geographic information can support the business analysis?
-
-Location information is also used by the competition analysis and dashboard map.
-
----
-
-## Competition Intelligence
-
-The system uses Google Places to retrieve live information about nearby businesses.
-
-The competition workflow is:
-
-```text
-Business Location
-       │
-       ▼
-Google Places
-       │
-       ▼
-Nearby Businesses
-       │
-       ▼
-Competitor Filtering
-       │
-       ▼
-Competition Analysis
-       │
-       ▼
-Dashboard Map + Table
-```
-
-The dashboard displays real competitor information including:
-- Business name
-- Rating
-- Review count
-- Category
-- Geographic location
-
-The map distinguishes the target business location from nearby competitor locations.
-
----
-
-## Financial Simulation
-
-The project contains a deterministic financial simulation engine.
-
-The simulator estimates:
-- Monthly customers
-- Monthly revenue
-- Food cost
-- Fixed costs
-- Monthly expenses
-- Estimated operating profit
-- Operating profit margin
-- Break-even customers per day
-
-The calculations are performed using Python rather than generated by the LLM.
-
-### Financial Model Formulas
-
-- **Monthly Customers:**
-  $$\text{Monthly Customers} = \text{Customers Per Day} \times \text{Working Days}$$
-
-- **Monthly Revenue:**
-  $$\text{Monthly Revenue} = \text{Monthly Customers} \times \text{Average Order Value}$$
-
-- **Food Cost:**
-  $$\text{Food Cost} = \text{Monthly Revenue} \times \text{Food Cost Percentage}$$
-
-- **Fixed Costs:**
-  $$\text{Fixed Costs} = \text{Rent} + \text{Staff Cost} + \text{Utilities} + \text{Marketing} + \text{Other Expenses}$$
-
-- **Monthly Expenses:**
-  $$\text{Monthly Expenses} = \text{Fixed Costs} + \text{Food Cost}$$
-
-- **Estimated Operating Profit:**
-  $$\text{Estimated Operating Profit} = \text{Monthly Revenue} - \text{Monthly Expenses}$$
-
-- **Operating Profit Margin:**
-  $$\text{Operating Profit Margin} = \left(\frac{\text{Estimated Operating Profit}}{\text{Monthly Revenue}}\right) \times 100$$
-
-- **Break-Even:**
-  The simulator estimates break-even based on contribution per customer.
-  $$\text{Contribution Per Customer} = \text{Average Order Value} \times (1 - \text{Food Cost Percentage})$$
-  $$\text{Break-Even Customers Per Day} = \frac{\text{Fixed Costs}}{\text{Contribution Per Customer} \times \text{Working Days}}$$
-
-### Financial Model Disclaimer
-
-The financial simulator provides estimated operating-level calculations based on user-provided assumptions.
-
-It does not account for every possible real-world business expense.
-
-Examples of excluded factors may include:
-- Taxes
-- Loan interest
-- Depreciation
-- Payment gateway fees
-- Delivery platform commissions
-- Wastage
-- Maintenance
-- Owner drawings
-- Other business-specific expenses
-
-Therefore, the output should be treated as a decision-support estimate, not as a guaranteed financial forecast.
-
----
-
-## What-If Analysis
-
-The project includes a **What-If Analysis Engine** for comparing business scenarios.
-
-The goal is to allow a business owner to modify assumptions and understand how the projected results change.
-
-```text
-Current Scenario
-       │
-       ▼
-Change Assumptions
-       │
-       ▼
-What-If Scenario
-       │
-       ▼
-Compare Results
-```
-
-### Financial What-If Analysis
-
-The financial What-If engine compares two sets of inputs:
-
-```text
-Baseline Inputs               Scenario Inputs
-      │                             │
-      ▼                             ▼
-Financial Simulator           Financial Simulator
-      │                             │
-      ▼                             ▼
-Baseline Results              Scenario Results
-```
-
-The system then calculates:
-- Absolute change
-- Percentage change
-- Revenue change
-- Expense change
-- Operating profit change
-- Margin change
-- Break-even change
-
-Both scenarios pass through the same financial simulator. This prevents duplicated financial formulas inside the What-If logic.
-
-### ML What-If Analysis
-
-The ML What-If engine allows business inputs to be modified and compares the machine learning results.
-
-It calls the actual prediction pipeline for:
-
-```text
-Baseline Inputs      Scenario Inputs
-      │                    │
-      ▼                    ▼
-  Prediction           Prediction
-```
-
-The comparison can include:
-- Baseline prediction
-- Scenario prediction
-- Baseline probabilities
-- Scenario probabilities
-- Probability changes
-- Prediction change
-- Optional SHAP comparison
-
-The What-If engine does not create a second ML model.
-
----
-
-## Real-Time Analysis Pipeline
-
-The Streamlit application provides a live analysis pipeline during business analysis.
-
-The pipeline reflects actual backend execution:
-
-```text
-Coordinator
-   ↓
-Location
-   ↓
-Performance
-   ↓
-SHAP
-   ↓
-Competition
-   ↓
-Opportunity
-   ↓
-Financial Analysis
-   ↓
-Final Dashboard
-```
-
-The application does not use artificial delays to simulate progress. The displayed pipeline events are connected to the actual backend analysis flow.
-
----
-
-## Streamlit Dashboard
-
-The final user-facing application is built using Streamlit.
-
-The dashboard is designed as a professional business intelligence interface rather than a default Streamlit application.
-
-```text
-Business Advisor
-│
-├── Overview
-├── Business Analysis
-├── Competition
-├── Financials
-└── What-If Analysis
-```
-
-### Dashboard Pages
-
-#### Overview
-The Overview page provides a high-level summary of the business analysis:
-- Performance summary
-- Opportunity assessment
-- Financial KPIs
-- Revenue information
-- Expense information
-- Operating profit
-- Break-even information
-- Business insights
-
-#### Business Analysis
-The Business Analysis page brings together the main analytical outputs:
-- Location Agent context
-- Performance Agent prediction
-- SHAP Explainability
-- Opportunity Agent score
-
-The page is designed to help a business owner understand the reasoning behind the analysis.
-
-#### Competition
-The Competition page displays nearby competitors retrieved using Google Places:
-- Competitor table
-- Ratings
-- Review counts
-- Categories
-- Geographic coordinates
-- Interactive map
-
-The map contains:
-```text
-Target Business
-        +
-Nearby Competitors
-```
-
-Competitor markers are based on real geographic coordinates returned by the competition analysis.
-
-#### Financials
-The Financials page displays the deterministic financial simulation:
-- Monthly Revenue
-- Monthly Expenses
-- Estimated Operating Profit
-- Operating Profit Margin
-- Break-Even Customers Per Day
-
-The page also uses charts to present the financial information in a business-friendly format.
-
-#### What-If Analysis
-The What-If page allows users to modify assumptions and compare them with the current scenario:
-
-```text
-Current Scenario
-        │
-        ▼
-Modify Inputs
-        │
-        ▼
-Run What-If
-        │
-        ▼
-Scenario Results
-```
-
-The dashboard displays:
-- Current value
-- What-If value
-- Absolute change
-- Percentage change
-
-Both financial and machine learning What-If analysis are supported.
-
----
-
-## Project Structure
+## 3. Project Architecture & Directory Structure
 
 ```text
 Business_Analysis_Agent/
-│
-├── app.py
-├── README.md
-├── requirements.txt
-├── .gitignore
+├── .env.example                     # Environment configuration template
+├── README.md                        # Project documentation
+├── requirements.txt                 # Backend Python dependencies
+├── server.py                        # FastAPI main application & API routes
 │
 ├── data/
-│   └── ...
+│   ├── processed/
+│   │   └── zomato_train_engineered.csv  # Runtime feature store for location context
+│   └── backups/                     # Safety backups of database dumps (git-ignored)
 │
 ├── models/
-│   └── ...
+│   ├── zomato_performance_model.pkl # Trained Random Forest classifier
+│   └── zomato_preprocessor.pkl      # Feature encoding and scaling pipeline
 │
-├── src/
-│   │
-│   ├── agent/
-│   │   ├── agent.py
-│   │   ├── competition_agent.py
-│   │   ├── coordinator_agent.py
-│   │   ├── location_agent.py
-│   │   ├── opportunity_agent.py
-│   │   ├── performance_agent.py
-│   │   ├── test_competition_agent.py
-│   │   ├── test_location_agent.py
-│   │   ├── test_performance_agent.py
-│   │   └── test_opportunity_agent.py
-│   │
+├── notebooks/                       # Provenance: Offline exploration & training
+│   ├── 01_zomato_exploration.ipynb
+│   ├── 02_zomato_cleaning.ipynb
+│   ├── 03_zomato_eda.ipynb
+│   ├── 04_zomato_feature_engineering.ipynb
+│   ├── 05_zomato_model_training.ipynb
+│   └── 06_google_places_competition.ipynb
+│
+├── scripts/                         # Maintenance & migration utilities
+│   ├── backup_database.py           # Database backup utility script
+│   ├── migrate_add_users.py         # Migration adding user authentication schema
+│   └── migrate_sqlite_to_mysql.py   # Historical SQLite to MySQL migration script
+│
+├── src/                             # Core backend application modules
+│   ├── auth.py                      # Argon2id hashing, JWT validation, auth dependencies
+│   ├── database.py                  # SQLAlchemy engine, session maker, and ORM models
+│   ├── agent/                       # Google ADK multi-agent system
+│   │   ├── coordinator_agent.py     # Master coordinator orchestrating workflow
+│   │   ├── competition_agent.py     # Competitor discovery agent
+│   │   ├── location_agent.py        # Location analysis agent
+│   │   ├── opportunity_agent.py     # Opportunity synthesis agent
+│   │   ├── performance_agent.py     # ML prediction and explainability agent
+│   │   ├── adk_runner.py            # ADK execution runtime bridge
+│   │   └── llm_config.py            # LiteLLM / Gemini model configuration
 │   ├── analysis/
-│   │   ├── location_context.py
-│   │   ├── opportunity.py
-│   │   └── what_if.py
-│   │
+│   │   ├── location_context.py      # Runtime location statistics lookup
+│   │   ├── opportunity.py           # Opportunity scoring logic
+│   │   └── what_if.py               # Scenario simulation engine
 │   ├── finance/
-│   │   ├── __init__.py
-│   │   └── simulator.py
-│   │
+│   │   └── simulator.py             # Deterministic financial modeling & break-even engine
 │   ├── ml/
-│   │   ├── predictor.py
-│   │   └── explainer.py
-│   │
+│   │   ├── predictor.py             # Model inference wrapper
+│   │   └── explainer.py             # SHAP explanation generator
 │   └── places/
-│       └── competition.py
+│       └── competition.py           # Google Places API integration & fallback
 │
-└── tests/
-    ├── test_phase1_phase2.py
-    ├── test_adk_orchestration.py
-    ├── test_financial_simulator.py
-    └── test_what_if.py
+├── tests/                           # Automated regression & integration test suite
+│   ├── test_financial_accuracy.py   # 11 tests for financial accuracy and break-even
+│   ├── test_security.py             # 14 tests for auth, JWT, rate-limiting, and isolation
+│   ├── test_mysql_integration.py    # 4 tests for database CRUD and cascading
+│   └── test_mysql_regression.py     # 4 tests for session lifecycles and recovery
+│
+└── frontend/                        # React 19 + Vite frontend application
+    ├── index.html                   # HTML entry point
+    ├── package.json                 # Node dependencies and scripts
+    ├── vite.config.js               # Vite bundler configuration
+    └── src/
+        ├── App.jsx                  # Root React application component
+        ├── components/
+        │   ├── Analysis/            # FinancialCard, PerformanceCard, CompetitorCard, etc.
+        │   ├── Auth/                # AuthModal (Login & Registration)
+        │   ├── Chat/                # ChatMessage, ChatInput, AnalysisProgress
+        │   ├── Map/                 # Competitor modal and location views
+        │   ├── Scenario/            # What-If scenario comparison modal
+        │   └── Sidebar/             # Conversation history sidebar
+        └── services/
+            └── api.js               # Centralized frontend API client
 ```
 
 ---
 
-## Technology Stack
+## 4. Prerequisites for Development
 
-### AI and Agent Framework
-- Google ADK
-- Google Gemini
-
-### Machine Learning
-- Scikit-learn
-- Random Forest
-- SHAP
-
-### Data Processing
-- Python
-- Pandas
-- NumPy
-
-### External Data
-- Google Places API
-
-### Dashboard
-- Streamlit
-- Plotly
-
-### Testing
-- Pytest
-
-### Development
-- Git
-- GitHub
-- Python Virtual Environment
+* **Operating System:** Windows 10/11 (or Linux/macOS with equivalent shell commands)
+* **Python:** Python 3.11, 3.12, or 3.13 (64-bit)
+* **Node.js:** Node.js v18.0+ or v20.0+ and `npm`
+* **Database:** MySQL Server 8.0+ running locally or accessible remotely
+* **External API Keys (Optional but Recommended):**
+  * Google Maps / Places API key (for live competitor discovery).
+  * Groq API key or Google Gemini API key (for Google ADK conversational reasoning).
 
 ---
 
-## Installation
+## 5. Installation & Setup
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/Tanay-chaturvedi/Business_Analysis_Agent.git
-```
-
-### 2. Move into the project directory
-```bash
+### Step 1: Clone the Repository
+```powershell
+git clone https://github.com/your-username/Business_Analysis_Agent.git
 cd Business_Analysis_Agent
 ```
 
-### 3. Create a virtual environment
-```bash
-python -m venv .venv
-```
-
-### 4. Activate the virtual environment on Windows
+### Step 2: Configure Python Virtual Environment
 ```powershell
-.venv\Scripts\activate
-```
+# Create virtual environment
+python -m venv .venv
 
-### 5. Install dependencies
-```bash
+# Activate virtual environment in PowerShell
+.\.venv\Scripts\Activate.ps1
+
+# Upgrade pip
+python -m pip install --upgrade pip
+
+# Install backend dependencies
 pip install -r requirements.txt
 ```
 
----
-
-## Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-GOOGLE_API_KEY=your_google_api_key
-GOOGLE_MAPS_API_KEY=your_google_places_api_key
+### Step 3: Install Frontend Dependencies
+```powershell
+cd frontend
+npm install
+cd ..
 ```
 
-Add any other required API credentials used by the project.
+---
 
-> The `.env` file should not be committed to GitHub.
+## 6. Environment Configuration
+
+1. Copy `.env.example` to `.env`:
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+2. Generate a cryptographically secure 256-bit JWT secret key in PowerShell:
+   ```powershell
+   python -c "import secrets; print(secrets.token_hex(32))"
+   ```
+3. Open `.env` in your editor and configure the variables:
+
+| Variable | Description | Required? | Example / Default |
+| :--- | :--- | :--- | :--- |
+| `JWT_SECRET_KEY` | Secret key for signing authentication tokens (min 32 chars) | **Yes** | *Generated 64-char hex string* |
+| `JWT_ALGORITHM` | JWT signing algorithm | **Yes** | `HS256` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token lifespan in minutes | **Yes** | `60` |
+| `MYSQL_HOST` | MySQL database host address | **Yes** | `localhost` |
+| `MYSQL_PORT` | MySQL database port | **Yes** | `3306` |
+| `MYSQL_USER` | MySQL database user | **Yes** | `root` |
+| `MYSQL_PASSWORD` | MySQL database password | **Yes** | *Your local MySQL password* |
+| `MYSQL_DATABASE` | MySQL database name | **Yes** | `bizadvisor_db` |
+| `CORS_ALLOWED_ORIGINS` | Permitted origins for frontend CORS | **Yes** | `http://localhost:5173,http://127.0.0.1:5173` |
+| `GOOGLE_MAPS_API_KEY` | Google Places API key for competitor lookup | Optional | *(Uses deterministic fallback if omitted)* |
+| `PRIMARY_LLM_PROVIDER` | Primary LLM provider | Optional | `groq` |
+| `PRIMARY_LLM_MODEL` | Primary LLM model name | Optional | `openai/gpt-oss-120b` |
+| `PRIMARY_LLM_API_KEY` | API key for primary LLM | Optional | *Your API Key* |
+| `PRIMARY_LLM_BASE_URL` | Base URL for LLM API | Optional | `https://api.groq.com/openai/v1` |
+
+> [!WARNING]
+> Never commit your `.env` file or hardcode credentials into source code. `.env` is ignored by `.gitignore`.
 
 ---
 
-## Running the Streamlit Application
+## 7. Database Setup & Initialization
 
-Start the main business advisor dashboard:
+1. Ensure MySQL server is running. Create the database:
+   ```sql
+   CREATE DATABASE IF NOT EXISTS bizadvisor_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+2. **Automatic Schema Creation:** When `server.py` starts, SQLAlchemy automatically creates the required tables (`users`, `conversations`, `messages`) if they do not already exist.
+3. **Database Migration Script (for existing databases):**
+   If you have an existing database from an earlier version, run the migration script:
+   ```powershell
+   python scripts/migrate_add_users.py
+   ```
+   > [!NOTE]
+   > Always back up your database before running migrations. A backup utility is provided in `scripts/backup_database.py`.
 
-```bash
-streamlit run app.py
+---
+
+## 8. Running the Application
+
+Open **two separate PowerShell terminal windows**:
+
+### Terminal 1: Backend API (FastAPI)
+```powershell
+# From the project root
+.\.venv\Scripts\Activate.ps1
+uvicorn server:app --reload --host 127.0.0.1 --port 8000
 ```
+* Backend API runs at: `http://127.0.0.1:8000`
+* Interactive API Documentation (Swagger): `http://127.0.0.1:8000/docs`
 
-The application will open in the browser. The Streamlit dashboard is the primary user-facing interface of the project.
+### Terminal 2: Frontend Dashboard (React / Vite)
+```powershell
+# From the project root
+cd frontend
+npm run dev
+```
+* Frontend Dashboard runs at: `http://localhost:5173`
 
 ---
 
-## Running the ADK Application
+## 9. API Reference
 
-For development and agent testing, the Google ADK web interface can be started using:
+All protected endpoints require an `Authorization: Bearer <token>` header obtained from `/api/auth/login`.
+
+| Method | Endpoint | Auth Required | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/register` | No | Register a new user with username, email, and password. |
+| `POST` | `/api/auth/login` | No | Authenticate user; returns JWT token. Rate-limited to 5 req/min. |
+| `GET` | `/api/auth/me` | **Yes** | Retrieve currently authenticated user's profile. |
+| `GET` | `/api/health` | No | Health check returning service and database status. |
+| `POST` | `/api/analyze` | Optional | Execute full business analysis for location, cuisine, cost, and parameters. |
+| `POST` | `/api/chat` | Optional | Multi-turn chat message endpoint with session context persistence. |
+| `POST` | `/api/scenario` | Optional | Run What-If scenario simulation comparing baseline against modified parameters. |
+| `POST` | `/api/financial/simulate` | Optional | Recalculate deterministic financial metrics on demand. |
+| `GET` | `/api/history` | **Yes** | List all past conversation sessions owned by the authenticated user. |
+| `GET` | `/api/history/{session_id}` | **Yes** | Fetch message history and structured analysis for a session. |
+| `DELETE`| `/api/history/{session_id}` | **Yes** | Delete conversation and cascading messages owned by the user. |
+
+---
+
+## 10. Machine Learning & Model Artifacts
+
+* **Trained Classifier:** [`models/zomato_performance_model.pkl`](models/zomato_performance_model.pkl) is a trained Random Forest model predicting business viability tiers based on historical Zomato restaurant performance metrics in Bengaluru.
+* **Preprocessor:** [`models/zomato_preprocessor.pkl`](models/zomato_preprocessor.pkl) handles feature scaling, one-hot encoding, and categorical imputation.
+* **Runtime Location Store:** [`data/processed/zomato_train_engineered.csv`](data/processed/zomato_train_engineered.csv) is loaded at runtime by `src/analysis/location_context.py` to calculate historical location density, median price, online order adoption, and cuisine diversity.
+* **Explainability:** SHAP values are dynamically generated by `src/ml/explainer.py` to explain feature impact (e.g., impact of cost-for-two, table booking availability, cuisine popularity).
+* **Research Provenance:** The 6 Jupyter notebooks in `notebooks/` document data cleaning, feature engineering, exploratory data analysis, model training, and Places API prototyping.
+
+---
+
+## 11. Financial Simulation Engine
+
+The financial engine ([`src/finance/simulator.py`](src/finance/simulator.py)) uses standard management accounting principles:
+
+### Core Formulas:
+1. **Average Spend per Customer (Estimate):**
+   $$\text{Average Spend} = \frac{\text{Cost for Two}}{2}$$
+   *(Modeled as an assumption-based estimate, not a guaranteed customer spend)*
+2. **Monthly Projected Revenue:**
+   $$\text{Monthly Revenue} = \text{Daily Customers} \times \text{Operating Days per Month} \times \text{Average Spend}$$
+3. **Variable Operating Costs:**
+   $$\text{Variable Costs} = \text{Monthly Revenue} \times \left(\frac{\text{Variable Cost Percentage}}{100}\right)$$
+4. **Fixed Operating Costs:**
+   $$\text{Fixed Operating Costs} = \text{Rent} + \text{Staff Costs} + \text{Utilities} + \text{Marketing} + \text{Other Fixed Costs}$$
+5. **Total Monthly Operating Expenses:**
+   $$\text{Total Operating Expenses} = \text{Variable Costs} + \text{Fixed Operating Costs}$$
+6. **Estimated Operating Profit (EBITDA Proxy):**
+   $$\text{Operating Profit} = \text{Monthly Revenue} - \text{Total Operating Expenses}$$
+7. **Contribution Margin & Break-Even Analysis:**
+   $$\text{Contribution Margin Ratio} = 1 - \left(\frac{\text{Variable Cost Percentage}}{100}\right)$$
+   $$\text{Break-Even Customers per Day} = \frac{\text{Fixed Operating Costs}}{\text{Average Spend} \times \text{Contribution Margin Ratio} \times \text{Operating Days}}$$
+   $$\text{Break-Even Target (Whole Number)} = \lceil \text{Break-Even Customers per Day} \rceil$$
+
+### Financial Disclaimers & Exclusions:
+* **Operating Profit vs. Net Profit:** Projections represent operating profit before corporate taxes, GST, interest on financing, depreciation on kitchen assets, and owner equity distributions.
+* **Third-Party Commissions:** Food delivery platform aggregator commissions (15%–25%) and payment gateway charges are not included in base assumptions and must be factored into Variable Costs by the user.
+
+---
+
+## 12. Running Automated Tests
+
+The repository contains an automated regression and security test suite:
 
 ```powershell
-$env:PYTHONPATH = (Get-Location).Path
-adk web src
+# Activate virtual environment
+.\.venv\Scripts\Activate.ps1
+
+# Run all 33 regression, security, and financial tests
+pytest -v tests/
+
+# Run focused financial accuracy tests only
+pytest -v tests/test_financial_accuracy.py
+
+# Run security and authentication tests only
+pytest -v tests/test_security.py
+
+# Run database integration tests only
+pytest -v tests/test_mysql_integration.py
 ```
 
-The ADK interface is mainly intended for agent development, debugging, and testing. The Streamlit application is the primary product interface.
-
----
-
-## Testing
-
-The project contains automated tests covering the major analytical components.
-
-Run the complete test suite:
-
-```bash
-pytest tests\ -v
-```
-
-The Phase 1–4 test suite currently contains **73 tests**:
-
-The test coverage includes:
-- ADK orchestration
-- Multi-agent workflow
-- Location analysis
-- Performance analysis
-- Competition analysis
-- Opportunity analysis
-- SHAP explainability
-- Financial simulation
-- Financial validation
-- What-If financial analysis
-- What-If ML analysis
-
-The tests help ensure that new UI features do not break the underlying analytical logic.
-
----
-
-## Example Business Input
-
-A business owner can provide information such as:
-
-- **Business Type:** Restaurant
-- **Location:** Koramangala, Bengaluru
-- **Cuisine:** South Indian
-- **Expected Customers Per Day:** 150
-- **Average Order Value:** ₹300
-- **Working Days:** 30
-- **Food Cost:** 30%
-- **Rent:** ₹100,000
-- **Staff Cost:** ₹150,000
-- **Utilities:** ₹25,000
-- **Marketing:** ₹20,000
-
-The system can then process the information through the relevant analytical components.
-
----
-
-## End-to-End Workflow
-
-```text
-                    BUSINESS OWNER
-                           │
-                           ▼
-                    STREAMLIT APP
-                           │
-                           ▼
-                  ENTER BUSINESS INPUTS
-                           │
-                           ▼
-                  ANALYZE BUSINESS
-                           │
-                           ▼
-                    COORDINATOR
-                           │
-          ┌────────────────┼────────────────┐
-          ▼                ▼                ▼
-      LOCATION        PERFORMANCE      COMPETITION
-          │                │                │
-          │                ▼                │
-          │              SHAP               │
-          │                │                │
-          └────────────────┼────────────────┘
-                           ▼
-                     OPPORTUNITY
-                           │
-                           ▼
-                      FINANCIALS
-                           │
-                           ▼
-                    FINAL DASHBOARD
-                           │
-                           ▼
-                    WHAT-IF ANALYSIS
-                           │
-                           ▼
-                 CURRENT vs SCENARIO
+### Frontend Production Build Verification:
+```powershell
+cd frontend
+npm run build
 ```
 
 ---
 
-## Testing and Validation
+## 13. Limitations & Considerations
 
-The project follows a layered testing strategy.
-
-- **Agent Testing:** Individual agents have dedicated tests to verify that they can operate independently.
-- **Orchestration Testing:** The coordinator workflow is tested to ensure the required agents execute in the correct order.
-- **Financial Testing:** The financial simulator is tested for:
-  - Correct calculations
-  - Zero revenue scenarios
-  - Zero contribution scenarios
-  - Invalid input values
-  - Expense validation
-  - Break-even calculations
-- **What-If Testing:** The What-If engine is tested for:
-  - Financial scenario comparison
-  - ML scenario comparison
-  - Probability changes
-  - Prediction changes
-  - Zero-baseline handling
-  - SHAP comparison
+1. **Geographic Coverage:** The pre-trained Random Forest model and location feature store are grounded in historical restaurant market data from Bengaluru, Karnataka. While the multi-agent system and Google Places competitor analysis function globally, historical performance inferences are strongest in urban Indian dining markets.
+2. **Assumption Sensitivity:** Financial projections rely on user-configurable inputs (daily footfall, average order size, rent, staff costs). Real-world outcomes depend heavily on operational execution, food quality, seasonality, and local regulations.
+3. **External API Dependence:** Live competitor discovery requires a valid Google Places API key; in its absence, the engine automatically falls back to deterministic historical benchmarks.
+4. **Single-Node Deployment:** In-memory rate limiting (`slowapi`) and local SQLite sessions are suitable for single-node instances. Production multi-instance deployments should configure a distributed Redis backend.
 
 ---
 
-## Design Principles
+## 14. GitHub Security & Contribution Checklist
 
-The project follows several core design principles:
-
-### 1. Separation of Responsibilities
-Each component has a clear responsibility:
-
-```text
-Agents                  → Orchestration
-Machine Learning        → Prediction
-SHAP                    → Explainability
-Google Places           → Live Competition Data
-Python Financial Engine → Deterministic Calculations
-Streamlit               → Presentation
-```
-
-### 2. Deterministic Numerical Analysis
-Financial calculations are implemented using Python functions instead of relying on LLM-generated arithmetic.
-
-This makes the calculations:
-- Reproducible
-- Testable
-- Consistent
-- Easier to validate
-
-### 3. Real External Data
-Competition information is retrieved from Google Places rather than being manually invented. This allows the competition section to reflect live external business information.
-
-### 4. Explainable Machine Learning
-The machine learning system uses SHAP to provide feature-level explanations instead of treating the model as a black box.
-
-### 5. Modular Architecture
-The system is divided into independent modules so that components can be tested and improved without rewriting the entire application.
-
----
-
-## Limitations
-
-The system is designed as a business decision-support platform, not as a guarantee of business success.
-
-Important limitations include:
-- Historical data may not perfectly represent future business performance.
-- Google Places data depends on external API availability and returned results.
-- Financial outputs depend heavily on user-provided assumptions.
-- The financial simulator does not model every real-world expense.
-- Machine learning predictions are dependent on the training dataset and feature quality.
-- SHAP explains model behavior but does not establish real-world causation.
-- Opportunity analysis should be interpreted as analytical guidance rather than certainty.
-
----
-
-## Future Enhancements
-
-Potential future improvements include:
-- Customer segmentation
-- Demand forecasting
-- Time-series revenue forecasting
-- More detailed competitor analysis
-- Customer review sentiment analysis
-- Google Maps integration enhancements
-- Automated market reports
-- PDF business reports
-- Cloud deployment
-- Authentication
-- Persistent business profiles
-- Database integration
-- Business performance tracking over time
-- Advanced scenario simulation
-- Additional financial metrics
-- More machine learning models
-
----
-
-## Project Objective
-
-The objective of the project is to build an AI-powered business advisory system that can help business owners analyze a potential business opportunity using multiple sources of information.
-
-Instead of relying on a single AI response, the platform combines:
-
-```text
-AI Reasoning
-     +
-Machine Learning
-     +
-Explainable AI
-     +
-Live Competition Data
-     +
-Financial Modeling
-     +
-Scenario Analysis
-```
-
-This creates a structured decision-support workflow for evaluating business opportunities.
-
----
-
-## Key Design Principle
-
-The core architecture separates AI orchestration from numerical analysis:
-
-> **Gemini understands and orchestrates. Python calculates. Google Places provides live competition data. Machine Learning provides historical performance predictions.**
-
-This makes the system more reliable because the LLM is not responsible for inventing or independently calculating analytical numbers.
-
----
-
-## Author
-
-**Tanay Chaturvedi**  
-B.Tech — Artificial Intelligence & Machine Learning  
-CMR Institute of Technology, Bengaluru  
-
----
-
-## License
-
-This project is developed for educational, demonstration, and portfolio purposes.
+Before pushing to a public or shared GitHub repository:
+- [x] Verify `.env` is listed in `.gitignore` and not tracked by Git (`git status`).
+- [x] Verify no hardcoded passwords, tokens, or API keys exist in source files.
+- [x] Verify database dump files or user export files in `data/` are excluded.
+- [x] Run `pytest -v tests/` to confirm all 33 automated tests pass.
+- [x] Run `npm run build` in `frontend/` to ensure the React bundle compiles without errors.

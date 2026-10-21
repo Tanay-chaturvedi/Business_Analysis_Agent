@@ -1,5 +1,6 @@
 from google.adk.agents import Agent
 from google.adk.tools import ToolContext
+from src.agent.llm_config import PRIMARY_MODEL_NAME
 
 from src.ml.predictor import predict_business_performance
 from src.ml.explainer import explain_business_prediction
@@ -113,7 +114,7 @@ def performance_analysis_tool(
 
 performance_agent = Agent(
     name="performance_agent",
-    model="gemini-3.6-flash",
+    model=PRIMARY_MODEL_NAME,
 
     description=(
         "Specialized agent responsible for predicting "

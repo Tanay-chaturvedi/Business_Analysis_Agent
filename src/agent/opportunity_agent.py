@@ -1,5 +1,6 @@
 from google.adk.agents import Agent
 from google.adk.tools import ToolContext
+from src.agent.llm_config import PRIMARY_MODEL_NAME
 from src.analysis.opportunity import analyze_business_opportunity
 
 
@@ -98,7 +99,7 @@ def opportunity_analysis_tool(
 
 opportunity_agent = Agent(
     name="opportunity_agent",
-    model="gemini-3.6-flash",
+    model=PRIMARY_MODEL_NAME,
 
     description=(
         "Specialized agent responsible for evaluating "

@@ -1,5 +1,6 @@
 from google.adk.agents import Agent
 from google.adk.tools import ToolContext
+from src.agent.llm_config import PRIMARY_MODEL_NAME
 
 from src.places.competition import (
     resolve_location_coordinates,
@@ -78,7 +79,7 @@ def competition_analysis_tool(
 
 competition_agent = Agent(
     name="competition_agent",
-    model="gemini-3.6-flash",
+    model=PRIMARY_MODEL_NAME,
 
     description=(
         "Specialized agent responsible for finding and "

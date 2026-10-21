@@ -6,6 +6,7 @@ __pycache__/
 
 # Environment / Secrets
 .env
+data/backups/
 
 # ADK Runtime
 src/agent/.adk/

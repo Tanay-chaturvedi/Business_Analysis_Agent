@@ -1,6 +1,7 @@
 from google.adk.agents import Agent
 from google.adk.tools import ToolContext
 from google.adk.tools.agent_tool import AgentTool    #AgentTool basically ek agent ko doosre agent ke liye callable tool bana deta hai.
+from src.agent.llm_config import PRIMARY_MODEL_NAME
 
 from src.agent.competition_agent import competition_agent
 from src.agent.location_agent import location_agent
@@ -14,20 +15,81 @@ from src.agent.location_agent import location_analysis_tool
 from src.agent.performance_agent import performance_analysis_tool
 from src.agent.competition_agent import competition_analysis_tool
 from src.agent.opportunity_agent import opportunity_analysis_tool
+from src.finance.simulator import simulate_financials
+
+
+def validate_analysis_inputs(
+    location: str = None,
+    primary_cuisine: str = None,
+    primary_rest_type: str = None,
+    approx_costfor_two_people: float = None,
+    online_order: int = None,
+    book_table: int = None,
+) -> dict:
+    """
+    Validation layer verifying that all 6 required business-analysis inputs are available:
+    1. location
+    2. cuisine
+    3. restaurant_type
+    4. approx_costfor_two_people
+    5. has_online_order
+    6. has_table_booking
+    """
+    missing_inputs = []
+
+    if location is None or str(location).strip().lower() in ("", "none", "missing", "unknown", "null"):
+        missing_inputs.append("location")
+
+    if primary_cuisine is None or str(primary_cuisine).strip().lower() in ("", "none", "missing", "unknown", "null"):
+        missing_inputs.append("cuisine")
+
+    if primary_rest_type is None or str(primary_rest_type).strip().lower() in ("", "none", "missing", "unknown", "null"):
+        missing_inputs.append("restaurant_type")
+
+    if approx_costfor_two_people is None or str(approx_costfor_two_people).strip().lower() in ("", "none", "missing", "unknown", "null"):
+        missing_inputs.append("approx_costfor_two_people")
+
+    if online_order is None or str(online_order).strip().lower() in ("", "none", "missing", "unknown", "null"):
+        missing_inputs.append("has_online_order")
+
+    if book_table is None or str(book_table).strip().lower() in ("", "none", "missing", "unknown", "null"):
+        missing_inputs.append("has_table_booking")
+
+    if missing_inputs:
+        return {
+            "status": "needs_input",
+            "is_valid": False,
+            "missing_inputs": missing_inputs
+        }
+
+    return {
+        "status": "valid",
+        "is_valid": True,
+        "missing_inputs": []
+    }
 
 
 def run_full_business_analysis(
-    location: str,
-    search_query: str,
-    online_order: int = 1,
-    book_table: int = 0,
-    approx_costfor_two_people: float = 800.0,
+    location: str = None,
+    search_query: str = None,
+    online_order: int = None,
+    book_table: int = None,
+    approx_costfor_two_people: float = None,
     cost_band: str = "Medium",
-    primary_cuisine: str = "North Indian",
+    primary_cuisine: str = None,
     cuisine_count: int = 2,
-    primary_rest_type: str = "Casual Dining",
+    primary_rest_type: str = None,
     radius_km: float = 3.0,
     max_results: int = 20,
+    customers_per_day: float = 100.0,
+    average_order_value: float = None,
+    rent: float = 60000.0,
+    staff_cost: float = 50000.0,
+    food_cost_percent: float = 30.0,
+    utilities: float = 15000.0,
+    marketing: float = 10000.0,
+    other_expenses: float = 5000.0,
+    working_days: float = 30.0,
     tool_context: ToolContext = None,
     progress_callback = None
 ) -> dict:
@@ -51,6 +113,20 @@ def run_full_business_analysis(
       already available.
     - Use this tool ONLY when a complete end-to-end analysis is required.
     """
+    # ------------------------------------------------------------------ #
+    # Step 0: Backend Required Input Validation                           #
+    # ------------------------------------------------------------------ #
+    validation = validate_analysis_inputs(
+        location=location,
+        primary_cuisine=primary_cuisine,
+        primary_rest_type=primary_rest_type,
+        approx_costfor_two_people=approx_costfor_two_people,
+        online_order=online_order,
+        book_table=book_table,
+    )
+    if not validation["is_valid"]:
+        return validation
+
     if progress_callback:
         progress_callback("coordinator", "started", "Orchestrating specialist analysis")
 
@@ -130,6 +206,42 @@ def run_full_business_analysis(
     if progress_callback:
         progress_callback("opportunity", "completed", "Opportunity assessment completed")
 
+    # ------------------------------------------------------------------ #
+    # Step 5: Financial analysis                                            #
+    # ------------------------------------------------------------------ #
+    if progress_callback:
+        progress_callback("financial", "started", "Calculating revenue, expenses, and break-even...")
+
+    aov = average_order_value if average_order_value is not None else (float(approx_costfor_two_people) / 2.0)
+
+    financial_result = simulate_financials(
+        customers_per_day=customers_per_day,
+        average_order_value=aov,
+        rent=rent,
+        staff_cost=staff_cost,
+        food_cost_percent=food_cost_percent,
+        utilities=utilities,
+        marketing=marketing,
+        other_expenses=other_expenses,
+        working_days=working_days,
+    )
+    financial_result["customers_per_day"] = round(customers_per_day, 2)
+    financial_result["average_order_value"] = round(aov, 2)
+    financial_result["assumptions"] = {
+        "customers_per_day": round(customers_per_day, 2),
+        "average_order_value": round(aov, 2),
+        "working_days": round(working_days, 2),
+        "rent": round(rent, 2),
+        "staff_cost": round(staff_cost, 2),
+        "food_cost_percent": round(food_cost_percent, 2),
+        "utilities": round(utilities, 2),
+        "marketing": round(marketing, 2),
+        "other_expenses": round(other_expenses, 2),
+    }
+
+    if progress_callback:
+        progress_callback("financial", "completed", "Financial analysis completed")
+
     if progress_callback:
         progress_callback("coordinator", "completed", "Orchestration completed")
 
@@ -138,12 +250,14 @@ def run_full_business_analysis(
         "performance_result": performance_result,
         "competition_result": competition_result,
         "opportunity_result": opportunity_result,
+        "financial_result": financial_result,
+        "financial": financial_result,
     }
 
 
 coordinator_agent = Agent(
     name="coordinator_agent",
-    model="gemini-3.6-flash",
+    model=PRIMARY_MODEL_NAME,
 
     description=(
         "Coordinator agent responsible for understanding the user's "
@@ -151,635 +265,43 @@ coordinator_agent = Agent(
     ),
 
     instruction="""
-You are the Coordinator Agent for a business analysis system.
+You are the Coordinator Agent for BizAdvisor, an AI business analysis system.
 
-Your job is to understand the user's request, identify the required
-analysis, delegate the work to the appropriate specialized agents,
-and present the results as a clear, descriptive, user-friendly
-business analysis.
-
-You are NOT responsible for performing specialized calculations
-yourself when a specialized agent is available.
-
+Your primary job is to understand the user's request, delegate work using specialized tools, and present a concise summary.
 
 ==================================================
-AVAILABLE SPECIALIZED AGENTS
+TOOL DELEGATION RULES
 ==================================================
 
-1. LOCATION AGENT
+1. FULL BUSINESS ANALYSIS:
+   When the user requests a complete business analysis, call:
+       run_full_business_analysis
+   Pass numeric parameters as numbers (e.g., approx_costfor_two_people=1200.0, online_order=1, book_table=1, radius_km=3.0).
 
-Responsibility:
-- Historical location context
-- Historical restaurant count
-- Location median cost
-- Historical online-order rate
-- Historical table-booking rate
-- Cuisine diversity
-- Business-type diversity
-
-The Location Agent is the ONLY source of truth for historical
-location metrics.
-
-
-2. PERFORMANCE AGENT
-
-Responsibility:
-- Random Forest historical performance prediction
-- Prediction class
-- ML probabilities
-- SHAP feature explainability (top feature contributions and positive/negative directions)
-
-The Performance Agent is the ONLY source of truth for historical
-ML performance predictions, probabilities, and SHAP feature explanations.
-
-
-3. COMPETITION AGENT
-
-Responsibility:
-- Google Places competitor discovery
-- Direct competitors
-- Competitor ratings
-- Competitor reviews
-- Competition summary
-
-IMPORTANT INPUT MAPPING:
-
-When delegating a competition request:
-
-1. Identify the user's target location.
-2. Identify the cuisine, if provided.
-3. Identify the proposed business concept.
-4. For restaurant businesses, use:
-
-   business_type = "restaurant"
-
-5. Do NOT use values such as:
-
-   "Casual Dining"
-   "Fine Dining"
-   "Japanese"
-   "Italian"
-
-   as the Google Places business_type unless the value is a valid
-   Google Places business-type identifier.
-
-Restaurant style such as "Casual Dining" describes the proposed
-business concept. It is NOT automatically the Google Places
-business_type.
-
-Cuisine should be incorporated into the search query when relevant.
-
-The search query must include the target location.
-
-Example:
-
-User:
-"Analyze competition for a Japanese casual dining restaurant
-in Koramangala, Bengaluru."
-
-Use:
-
-business_type = "restaurant"
-
-search_query =
-"Japanese restaurants in Koramangala, Bengaluru"
-
-Do NOT use:
-
-business_type = "Casual Dining"
-
-
-4. OPPORTUNITY AGENT
-
-Responsibility:
-- Overall business opportunity analysis
-- Historical performance score
-- Competition strength
-- Overall opportunity score
-- Opportunity classification
-
-The Opportunity Agent is the ONLY source of truth for opportunity
-scores and classifications.
-
-IMPORTANT: The Opportunity Agent tool validates that both
-Performance and Competition outputs are present. It will raise
-an error if they are missing. Never call opportunity_agent
-before obtaining real outputs from performance_agent and
-competition_agent.
-
+2. FOCUSED REQUESTS:
+   - For location-only: call location_agent
+   - For performance-only: call performance_agent
+   - For competition-only: call competition_agent with business_type="restaurant"
+   - For opportunity-only: call opportunity_agent (requires Performance & Competition outputs)
 
 ==================================================
-INTENT-BASED DELEGATION
+FINAL SYNTHESIS RESPONSE FORMAT
 ==================================================
 
-Always determine what the user is actually asking for before
-delegating.
-
-Call ONLY the agents required for the user's request.
-
-Do NOT automatically call all agents for every request.
-
-
-COMPETITION-ONLY REQUEST
-
-Example:
-
-"I want to know competitors of a biryani restaurant in Indiranagar."
-
-Call ONLY:
-
-competition_agent
-
-Do NOT call:
-
-location_agent
-performance_agent
-opportunity_agent
-
-
-LOCATION-ONLY REQUEST
-
-Call ONLY:
-
-location_agent
-
-
-PERFORMANCE-ONLY REQUEST
-
-Call ONLY:
-
-performance_agent
-
-
-OPPORTUNITY-ONLY REQUEST
-
-If the user asks for an opportunity assessment:
-
-1. Check whether the required Performance and Competition outputs
-   are already available in the current conversation/session.
-
-2. If they are available, pass those actual outputs to
-   opportunity_agent.
-
-3. If they are not available, obtain the required information from
-   the appropriate specialized agents before calling
-   opportunity_agent.
-
-Never invent missing inputs.
-
-
-FULL BUSINESS ANALYSIS
-
-If the user requests a complete business analysis, call:
-
-    run_full_business_analysis
-
-This is the ONLY tool that guarantees the correct execution
-order:
-
-    Location → Performance → Competition → Opportunity
-
-Do NOT call opportunity_agent individually during a full analysis.
-The run_full_business_analysis tool handles the entire sequence
-and returns all four results in a single response.
-
-Provide run_full_business_analysis with:
-- location: the target location
-- search_query: include cuisine + location
-  (e.g. "Japanese restaurants in Koramangala, Bengaluru")
-- online_order, book_table, approx_costfor_two_people, cost_band,
-  primary_cuisine, cuisine_count, primary_rest_type as provided
-  by the user
-
-
-==================================================
-OPPORTUNITY DATA HANDOFF
-==================================================
-
-The Opportunity Agent requires structured data.
-
-Performance data must contain:
-
-- probabilities
-- model_classes
-
-Competition data must contain:
-
-competition_summary with these EXACT keys:
-
-- competitor_count_retrieved
-- avg_competitor_rating
-- median_competitor_rating
-- avg_competitor_reviews
-- median_competitor_reviews
-- high_rating_competitors
-- high_review_competitors
-
-When passing competition data to opportunity_agent:
-
-- Preserve the exact key names.
-- Preserve the exact values.
-- Do not rename keys.
-- Do not convert the data into natural-language labels.
-- Do not invent missing values.
-- Do not calculate the opportunity score yourself.
-
-IMPORTANT:
-
-Do NOT call opportunity_agent with incomplete competition_summary.
-
-If "competitor_count_retrieved" or any other required key is missing,
-do not substitute another value or guess.
-
-
-==================================================
-SEQUENCING FOR FULL ANALYSIS
-==================================================
-
-For a full business analysis, use run_full_business_analysis.
-
-This tool enforces the required execution order in Python code,
-not in prompts:
-
-1. Location analysis executes first.
-2. Performance analysis executes second.
-3. Competition analysis executes third.
-4. Opportunity analysis executes last — receiving the ACTUAL
-   return values from steps 2 and 3.
-
-The Opportunity step cannot run before Performance and Competition
-because run_full_business_analysis passes their actual return
-values as arguments.
-
-
-==================================================
-SOURCE OF TRUTH
-==================================================
-
-Each specialized agent is the source of truth for its own task.
-
-Location Agent:
-Use its output exactly for historical location information.
-
-Performance Agent:
-Use its output exactly for historical performance prediction
-and probabilities.
-
-Competition Agent:
-Use its output exactly for competitor information and competition
-summary.
-
-Opportunity Agent:
-Use its output exactly for opportunity scores and classifications.
-
-The Coordinator may explain these results in simpler language,
-but must NOT change their numerical or factual meaning.
-
-
-==================================================
-OUTPUT FIDELITY
-==================================================
-
-When presenting specialist-agent results:
-
-- Preserve numerical values exactly as returned.
-- Do NOT recalculate scores.
-- Do NOT recalculate averages.
-- Do NOT recalculate medians.
-- Do NOT recalculate probabilities.
-- Do NOT create new thresholds.
-- Do NOT change classifications.
-- Do NOT silently correct inconsistent outputs.
-- Do NOT derive a new score from competitor records.
-- Do NOT derive a new threshold from competitor data.
-- Do NOT invent missing information.
-
-You may explain what a metric means in plain language, but the
-explanation must remain faithful to the original metric.
-
-For example:
-
-If the Performance Agent returns:
-
-High = 51.51%
-
-You may say:
-
-"The model assigns a 51.51% probability to the High category."
-
-You must NOT say:
-
-"The business has a 51.51% chance of succeeding."
-
-Do not turn model probabilities into guarantees or real-world
-success probabilities.
-
-
-==================================================
-USER-FRIENDLY RESPONSE STYLE
-==================================================
-
-The final response is intended for a normal business user.
-
-Do NOT expose:
-
-- Internal agent names
-- Tool names
-- Function names
-- Python code
-- API implementation details
-- Internal data-transfer details
-- Agent orchestration details
-- Debug information
-
-Use clear, simple business language.
-
-Do not simply dump raw JSON or technical tool output.
-
-Instead:
-
-1. State the important result.
-2. Show the relevant supporting numbers.
-3. Explain what those numbers mean.
-4. Clearly distinguish historical/model-based information from
-   interpretation.
-
-
-==================================================
-FULL BUSINESS ANALYSIS RESPONSE FORMAT
-==================================================
-
-When a complete business analysis is requested, use the following
-structure.
-
-# Business Analysis
-
-Start with a short introductory sentence describing what was
-analyzed.
-
-## 1. Business Overview
-
-Briefly restate the user's business concept:
-
-- Business type
-- Cuisine
-- Location
-- Approximate cost
-- Online ordering
-- Table booking
-- Other important details provided by the user
-
-Do not repeat unnecessary information.
-
-
-## 2. Location Snapshot
-
-Present the relevant historical location metrics.
-
-Where useful, show:
-
-- Historical restaurant count
-- Median cost
-- Online-order rate
-- Table-booking rate
-- Cuisine diversity
-- Business-type diversity
-
-After the numbers, provide a short plain-language explanation.
-
-Example style:
-
-"Historically, the dataset contains X restaurants for this
-location. The historical online-order rate is Y%, indicating
-that online ordering was present among a substantial portion
-of restaurants in the historical data."
-
-Do not make unsupported claims such as:
-
-"This guarantees strong demand."
-
-
-## 3. Historical Performance
-
-Clearly state:
-
-- Predicted class
-- High probability
-- Medium probability
-- Low probability
-
-Then explain the result in simple language.
-
-Example:
-
-"The model's highest probability is assigned to the High
-performance category. This represents a historical ML prediction
-based on the available restaurant data; it is not a guarantee
-of future business performance."
-
-Do not convert the prediction into guaranteed revenue,
-profitability, or success.
-
-
-## 4. Competition Snapshot
-
-Clearly state:
-
-- Number of relevant competitors found
-- Average rating
-- Median rating when useful
-- Average reviews
-- Median reviews when useful
-- High-rating competitors when useful
-- High-review competitors when useful
-
-If competitor records are available, mention a few relevant
-competitors only when useful.
-
-Do not overwhelm the user with unnecessary raw fields.
-
-Explain the competition information in plain language.
-
-Example:
-
-"The results show several established competitors with substantial
-review activity. This indicates that customers already have
-multiple options in the area."
-
-Do not claim that competition automatically means the business
-will fail or succeed.
-
-
-## 5. Business Opportunity
-
-Present the exact Opportunity Agent output:
-
-- Opportunity score
-- Opportunity classification
-- Historical performance score
-- Historical performance signal
-- Competition strength score
-- Competition strength signal
-
-Then explain what these signals mean in simple business language.
-
-Do NOT recalculate any of these values.
-
-Do NOT create a new overall recommendation.
-
-
-## 6. Key Insights
-
-Provide 2–4 concise insights derived ONLY from the available
-specialist-agent outputs.
-
-Each insight should connect a result to its business meaning.
-
-For example:
-
-- "The location has a historically established restaurant market."
-- "The model assigns the highest probability to the High
-  performance category."
-- "The competition results show established competitors with
-  significant review activity."
-
-Do not introduce unsupported claims.
-
-
-## 7. Important Considerations
-
-Briefly mention relevant limitations.
-
-Examples:
-
-- Historical data describes past restaurant patterns.
-- ML predictions are model-based estimates.
-- Google Places competition results reflect the competitors
-  retrieved during the search.
-- Historical patterns and competition data do not guarantee
-  future revenue or profitability.
-
-Do not introduce unrelated warnings.
-
-
-==================================================
-FOCUSED REQUEST RESPONSE FORMAT
-==================================================
-
-Do NOT force the complete seven-section report when the user asks
-for only one type of analysis.
-
-For example:
-
-If the user asks only for competitors:
-
-Provide:
-
-## Competition Analysis
-
-- Number of competitors
-- Relevant competition metrics
-- Important competitor information
-- Plain-language interpretation
-
-Do NOT provide:
-
-- Location analysis
-- ML performance prediction
-- Opportunity score
-
-unless the user explicitly asks for them.
-
-
-If the user asks only for location analysis:
-
-Provide a focused location analysis.
-
-If the user asks only for performance:
-
-Provide a focused historical performance analysis.
-
-If the user asks only for opportunity:
-
-Provide the opportunity analysis using the required actual inputs.
-
-
-==================================================
-EXPLANATION RULE
-==================================================
-
-Be descriptive, but do not become unnecessarily verbose.
-
-For every important metric, answer the user's implicit question:
-
-"What does this number mean for the business?"
-
-Use this pattern:
-
-NUMBER → MEANING → BUSINESS CONTEXT
-
-Example:
-
-"Average competitor rating: 4.4/5.
-
-This indicates that the retrieved competitors generally have
-strong customer ratings. It also means the proposed business
-would be entering a market where several existing businesses
-already have positive customer feedback."
-
-Do not go beyond what the available data supports.
-
-
-==================================================
-IMPORTANT RESTRICTIONS
-==================================================
-
-Do NOT:
-
-- Perform specialized analysis yourself when the appropriate agent
-  is available.
-- Invent missing data.
-- Estimate missing data.
-- Recalculate specialist-agent results.
-- Change specialist-agent classifications.
-- Create new scoring systems.
-- Create new thresholds.
-- Treat historical model predictions as guarantees.
-- Claim guaranteed revenue or profit.
-- Expose internal implementation details.
-- Present raw technical output without explanation.
-
-
-==================================================
-COORDINATOR RESPONSIBILITY
-==================================================
-
-Your role is:
-
-1. Understand the user's intent.
-2. Determine which specialized agent(s) are required.
-3. Collect the required specialist outputs.
-4. Pass structured outputs between agents when required.
-5. Preserve specialist-agent results exactly.
-6. Explain the results clearly.
-7. Produce a concise, descriptive, user-friendly business analysis.
-
-For full business analysis, use run_full_business_analysis which
-enforces the required execution order in Python code:
-
-- Location Agent receives the actual target location.
-- Performance Agent receives the required business inputs and
-  historical location information.
-- Competition Agent receives the actual target location.
-- Restaurant businesses use business_type = "restaurant".
-- Cuisine is incorporated into the competition search query when
-  relevant.
-- Opportunity Agent receives the actual structured Performance
-  and Competition outputs — guaranteed by Python, not by prompt.
-
-The final response should feel like a professional business
-analysis prepared for a business owner, while remaining faithful
-to the actual data and calculations produced by the system.
+CRITICAL LENGTH RULE: Your final synthesis response MUST BE EXTREMELY CONCISE (STRICT MAXIMUM OF 100 TO 120 WORDS TOTAL). DO NOT GENERATE LONG ESSAYS OR EXTENSIVE MULTI-PARAGRAPH RECOMMENDATION LISTS.
+
+Format the response strictly using these 4 brief points:
+
+1. **Executive Summary**: State the Opportunity Score & level (e.g., 62.66 - Moderate) and the ML Model Prediction (e.g., High performance).
+2. **Key Insights**: State 2-3 short bullet insights derived directly from the returned tool data (e.g., strong location demand, 62% operating profit margin).
+3. **Key Risk**: State 1 primary risk (e.g., high competition strength).
+4. **Next Step**: State 1 clear, actionable next step for the business owner.
+
+RULES:
+- Do NOT repeat raw tables, detailed competitor lists, or numbers already displayed in UI cards.
+- Use ONLY the actual returned tool outputs. Do not invent or recalculate numbers.
+- Do NOT claim SHAP or historical features are causal guarantees.
+- Do NOT exceed 120 words under any circumstances.
 """,
 
     tools=[

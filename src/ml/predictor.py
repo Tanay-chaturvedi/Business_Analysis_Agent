@@ -52,13 +52,15 @@ def predict_business_performance(
 
     log_cost = np.log1p(approx_costfor_two_people)
 
+    loc_clean = location.split(",")[0].strip() if isinstance(location, str) else location
+
     input_data = pd.DataFrame([{
         "online_order": online_order,
         "book_table": book_table,
         "approx_costfor_two_people": approx_costfor_two_people,
         "log_cost": log_cost,
         "cost_band": cost_band,
-        "location": location,
+        "location": loc_clean,
         "primary_cuisine": primary_cuisine,
         "cuisine_count": cuisine_count,
         "primary_rest_type": primary_rest_type,
