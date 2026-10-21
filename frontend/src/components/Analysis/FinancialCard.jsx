@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { DollarSign, Calculator, PieChart, SlidersHorizontal, RefreshCw, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { DollarSign, Calculator, PieChart, SlidersHorizontal, RefreshCw, AlertTriangle, Info } from 'lucide-react';
 
 /**
  * Canonical client-side financial recalculation engine.
@@ -85,22 +85,20 @@ function calculateFinancialMetrics(assump) {
 }
 
 export default function FinancialCard({ financialData }) {
-  if (!financialData) return null;
-
   // Extract initial baseline assumptions from backend payload
-  const rawAssumptions = financialData.assumptions || {};
+  const rawAssumptions = financialData?.assumptions || {};
   const baseline = useMemo(() => ({
-    customers_per_day: financialData.customers_per_day ?? rawAssumptions.customers_per_day ?? 100,
+    customers_per_day: financialData?.customers_per_day ?? rawAssumptions.customers_per_day ?? 100,
     working_days: rawAssumptions.working_days ?? 30,
-    average_order_value: financialData.average_order_value ?? rawAssumptions.average_order_value ?? 400,
-    rent: financialData.rent ?? rawAssumptions.rent ?? 60000,
-    staff_cost: financialData.staff_cost ?? rawAssumptions.staff_cost ?? 50000,
-    utilities: financialData.utilities ?? rawAssumptions.utilities ?? 15000,
-    marketing: financialData.marketing ?? rawAssumptions.marketing ?? 10000,
-    other_expenses: financialData.other_expenses ?? rawAssumptions.other_expenses ?? 5000,
+    average_order_value: financialData?.average_order_value ?? rawAssumptions.average_order_value ?? 400,
+    rent: financialData?.rent ?? rawAssumptions.rent ?? 60000,
+    staff_cost: financialData?.staff_cost ?? rawAssumptions.staff_cost ?? 50000,
+    utilities: financialData?.utilities ?? rawAssumptions.utilities ?? 15000,
+    marketing: financialData?.marketing ?? rawAssumptions.marketing ?? 10000,
+    other_expenses: financialData?.other_expenses ?? rawAssumptions.other_expenses ?? 5000,
     food_cost_percent: rawAssumptions.food_cost_percent ?? rawAssumptions.variable_cost_percent ?? 30,
-    fixed_costs: financialData.fixed_costs ?? financialData.fixedCost,
-  }), [financialData]);
+    fixed_costs: financialData?.fixed_costs ?? financialData?.fixedCost,
+  }), [financialData, rawAssumptions.customers_per_day, rawAssumptions.working_days, rawAssumptions.average_order_value, rawAssumptions.rent, rawAssumptions.staff_cost, rawAssumptions.utilities, rawAssumptions.marketing, rawAssumptions.other_expenses, rawAssumptions.food_cost_percent, rawAssumptions.variable_cost_percent]);
 
   const [assumptions, setAssumptions] = useState(baseline);
   const [showEditor, setShowEditor] = useState(false);
@@ -114,6 +112,8 @@ export default function FinancialCard({ financialData }) {
 
   // Dynamically recalculated metrics
   const metrics = useMemo(() => calculateFinancialMetrics(assumptions), [assumptions]);
+
+  if (!financialData) return null;
 
   const handleInputChange = (field, value) => {
     setAssumptions((prev) => ({
