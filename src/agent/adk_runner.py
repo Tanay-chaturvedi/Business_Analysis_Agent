@@ -47,37 +47,43 @@ _ADK_APP_NAME = "bizadvisor"
 # Helper: extract the run_full_business_analysis result from ADK events
 
 def _extract_tool_result_from_events(events: list) -> Optional[Dict[str, Any]]:
-    """
-    Scan the list of ADK Event objects produced by Runner.run_async() and
-    extract the structured result dict returned by run_full_business_analysis.
-
-    The tool result is stored in the FunctionResponse part of an event whose
-    author is 'tool' or whose content parts contain FunctionResponse objects.
-
-    Returns the parsed result dict, or None if it cannot be found.
-    """
     tool_name = "run_full_business_analysis"
+    required_keys = {
+        "location_result",
+        "performance_result",
+        "competition_result",
+        "opportunity_result",
+    }
 
     for event in events:
-        # event.content may be None for non-content events
         if event.content is None:
             continue
 
-        parts = event.content.parts or []
-        for part in parts:
-            # FunctionResponse carries the tool's return value
-            if hasattr(part, "function_response") and part.function_response is not None:
-                fr = part.function_response
-                # Match specifically the tool we care about
-                if fr.name == tool_name:
-                    response_data = fr.response
-                    if isinstance(response_data, dict):
-                        return response_data
-                    # Sometimes ADK wraps the dict in a 'result' key
-                    if isinstance(response_data, dict) and "result" in response_data:
-                        result = response_data["result"]
-                        if isinstance(result, dict):
-                            return result
+        for part in event.content.parts or []:
+            fr = getattr(part, "function_response", None)
+
+            if fr is None or fr.name != tool_name:
+                continue
+
+            response_data = fr.response
+
+            # Unwrap ADK response envelopes.
+            while isinstance(response_data, dict) and isinstance(
+                response_data.get("result"), dict
+            ):
+                response_data = response_data["result"]
+
+            # Only accept a complete analysis result.
+            if isinstance(response_data, dict) and required_keys.issubset(response_data):
+                return response_data
+
+            logger.warning(
+                "[ADK Runner] Tool response was incomplete. Keys received: %s",
+                list(response_data.keys())
+                if isinstance(response_data, dict)
+                else type(response_data).__name__,
+            )
+
     return None
 
 
