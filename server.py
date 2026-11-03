@@ -13,10 +13,10 @@ import json
 import uuid
 import datetime
 
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from fastapi import FastAPI, HTTPException, Query, BackgroundTasks, Request, Depends, status
+from fastapi import FastAPI, HTTPException, Query, Request, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -26,12 +26,10 @@ from slowapi.errors import RateLimitExceeded
 from dotenv import load_dotenv
 
 # Import existing backend modules
-from src.agent.coordinator_agent import run_full_business_analysis, coordinator_agent
+# coordinator orchestration managed via adk_runner
 from src.agent.adk_runner import run_analysis_via_adk  # Genuine ADK runtime wrapper
-from src.analysis.what_if import compare_ml_scenarios, compare_financial_scenarios
-from src.analysis.location_context import get_location_context
+from src.analysis.what_if import compare_financial_scenarios
 from src.ml.predictor import predict_business_performance
-from src.places.competition import summarize_competition, search_competitors_by_text
 
 # Import authentication and security
 from src.auth import (
@@ -48,7 +46,6 @@ from src.database import (
     SessionLocal,
     User,
     Conversation,
-    Message,
     get_or_create_conversation,
     save_chat_turn,
     get_conversation_list,
@@ -233,9 +230,9 @@ class LoginRequest(BaseModel):
     password: str = Field(...)
 
 class AnalyzeRequest(BaseModel):
-    location: str = Field(..., example="Koramangala, Bengaluru")
-    primary_cuisine: str = Field(default="North Indian", example="Japanese")
-    approx_cost_for_two: float = Field(default=800.0, example=1800.0)
+    location: str = Field(..., json_schema_extra={"example": "Koramangala, Bengaluru"})
+    primary_cuisine: str = Field(default="North Indian", json_schema_extra={"example": "Japanese"})
+    approx_cost_for_two: float = Field(default=800.0, json_schema_extra={"example": 1800.0})
     online_order: bool = Field(default=True)
     book_table: bool = Field(default=True)
     cuisine_count: int = Field(default=2)
@@ -244,7 +241,7 @@ class AnalyzeRequest(BaseModel):
     radius_km: float = Field(default=3.0)
 
 class ChatRequest(BaseModel):
-    message: str = Field(..., example="I want to open a premium Japanese restaurant in Koramangala, Bengaluru. Cost for two is ₹1800.")
+    message: str = Field(..., json_schema_extra={"example": "I want to open a premium Japanese restaurant in Koramangala, Bengaluru. Cost for two is ₹1800."})
     session_id: Optional[str] = None
     parameters_override: Optional[Dict[str, Any]] = None
 
@@ -1953,8 +1950,8 @@ def chat_endpoint(
             comp_count = len(comp_res.get("competitors", [])) or comp_res.get("competition_summary", {}).get("competitor_count_retrieved", 0)
             comp_res["competitor_count"] = comp_count
 
-            pred_class = analysis["performance_result"]["prediction"]
-            opp_score = analysis["opportunity_result"]["opportunity_score"]["score"]
+            pred_class = analysis.get("performance_result", {}).get("prediction", "Unknown")
+            opp_score = analysis.get("opportunity_result", {}).get("opportunity_score", {}).get("score", 0)
 
             # Inject backend-generated Business Takeaway into analysis
             # so the frontend displays and reads the EXACT same text.
@@ -2078,8 +2075,8 @@ def create_scenario_endpoint(
         scen_score = scen_full["opportunity_result"]["opportunity_score"]["score"]
         score_diff = round(scen_score - base_score, 1)
 
-        base_high_prob = base_full["performance_result"]["probabilities"].get("High", 0.0)
-        scen_high_prob = scen_full["performance_result"]["probabilities"].get("High", 0.0)
+        base_high_prob = base_full.get("performance_result", {}).get("probabilities", {}).get("High", 0.0)
+        scen_high_prob = scen_full.get("performance_result", {}).get("probabilities", {}).get("High", 0.0)
         prob_diff = round((scen_high_prob - base_high_prob) * 100, 1)
 
         summary_bullets = []
@@ -2117,8 +2114,8 @@ def create_scenario_endpoint(
                 "base_high_prob": round(base_high_prob * 100, 1),
                 "scenario_high_prob": round(scen_high_prob * 100, 1),
                 "prob_delta_pct": prob_diff,
-                "base_prediction": base_full["performance_result"]["prediction"],
-                "scenario_prediction": scen_full["performance_result"]["prediction"],
+                "base_prediction": base_full.get("performance_result", {}).get("prediction", "Unknown"),
+                "scenario_prediction": scen_full.get("performance_result", {}).get("prediction", "Unknown"),
                 "summary_notes": summary_bullets
             }
         }

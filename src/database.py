@@ -2,9 +2,10 @@
 src/database.py
 ================
 SQLAlchemy MySQL Database Engine and Models for BizAdvisor.
-Strictly restricted to TWO application tables:
-1. `conversations`
-2. `messages`
+Application tables:
+1. `users`
+2. `conversations`
+3. `messages`
 
 Configured via environment variables (.env) with connection pooling,
 proper session lifecycles, and cascade handling.
@@ -16,7 +17,7 @@ import json
 import logging
 from urllib.parse import quote_plus
 from datetime import datetime, timedelta, timezone
-from typing import Generator, Dict, Any, Optional, Tuple
+from typing import Generator, Dict, Any, Optional
 
 from dotenv import load_dotenv
 from sqlalchemy import (

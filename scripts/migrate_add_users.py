@@ -16,7 +16,7 @@ import logging
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from sqlalchemy import inspect, text
-from src.database import engine, Base, User, Conversation
+from src.database import engine, User
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("migration")
