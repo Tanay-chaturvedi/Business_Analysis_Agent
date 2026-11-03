@@ -6,7 +6,7 @@ BizAdvisor is a full-stack, machine learning-driven decision support system that
 
 ## 1. Project Title & Introduction
 
-**BizAdvisor: AI-Based Business Opportunity Assessment & Advisory System**<br/>
+**BizAdvisor: AI-Based Business Opportunity Assessment & Advisory System**
 **Author:** Tanay Chaturvedi (AI & Machine Learning Engineering Student)
 
 When evaluating a new restaurant idea, operators are typically forced to choose between black-box statistical reports, expensive market research consultants, or generic conversational chatbots that lack real domain data and mathematical consistency.
@@ -105,48 +105,48 @@ I selected the following technologies based on reliability, performance, and cle
 
 ```mermaid
 flowchart TD
-    subgraph Client["Frontend Layer (React 19 + Vite)"]
-        UI["Chat Interface (App.jsx)"]
-        AuthUI["Authentication (AuthModal.jsx)"]
+    subgraph Client ["Frontend Layer - React 19 and Vite"]
+        UI["Chat Interface - App.jsx"]
+        AuthUI["Authentication - AuthModal.jsx"]
         Cards["Interactive Analysis Cards"]
-        LeafletMap["Competitor Map (Leaflet)"]
-        APIClient["API Client (services/api.js)"]
+        LeafletMap["Competitor Map - Leaflet"]
+        APIClient["API Client - services/api.js"]
     end
 
-    subgraph Gateway["API & Security Gateway (FastAPI)"]
-        CORS["CORS & Security Headers"]
-        Limiter["Rate Limiting (SlowAPI)"]
-        AuthEngine["Argon2id & JWT Auth"]
-        Parser["Query & Intent Parser"]
-        TakeawayBuilder["Takeaway & TTS Builder"]
+    subgraph Gateway ["API and Security Gateway - FastAPI"]
+        CORS["CORS and Security Headers"]
+        Limiter["Rate Limiting - SlowAPI"]
+        AuthEngine["Argon2id and JWT Auth"]
+        Parser["Query and Intent Parser"]
+        TakeawayBuilder["Takeaway and Audio Builder"]
     end
 
-    subgraph Agents["Agent Orchestration (Google ADK & LiteLLM)"]
-        ADKRunner["ADK Runner (adk_runner.py)"]
+    subgraph Agents ["Agent Orchestration - Google ADK and LiteLLM"]
+        ADKRunner["ADK Runner - adk_runner.py"]
         Coordinator["Coordinator Agent"]
         Pipeline["run_full_business_analysis"]
         LiteLLMBridge["LiteLLM Gateway"]
-        GroqAPI["Groq LPU (GPT-OSS-120B)"]
+        GroqAPI["Groq LPU - GPT-OSS-120B"]
     end
 
-    subgraph Engines["Domain Engines & Machine Learning"]
+    subgraph Engines ["Domain Engines and Machine Learning"]
         LocEngine["Location Context Engine"]
-        MLEngine["Random Forest (300 Trees)"]
+        MLEngine["Random Forest - 300 Trees"]
         SHAPEngine["SHAP TreeExplainer"]
         PlacesEngine["Google Places API v1"]
         OppEngine["Opportunity Scoring Engine"]
         FinEngine["Financial Simulator"]
     end
 
-    subgraph Storage["Persistence & Model Store"]
-        MySQL[("MySQL: bizadvisor_db")]
-        ModelArtifacts[("models/*.pkl")]
-        FeatureStore[("data/processed/*.csv")]
+    subgraph Storage ["Persistence and Model Store"]
+        MySQL["MySQL Database: bizadvisor_db"]
+        ModelArtifacts["Pre-Trained Model Artifacts"]
+        FeatureStore["Processed Historical Datasets"]
     end
 
     UI --> APIClient
     AuthUI --> APIClient
-    APIClient -->|"HTTPS + Bearer Token"| CORS
+    APIClient -->|HTTPS with Bearer Token| CORS
     CORS --> Limiter
     Limiter --> AuthEngine
     AuthEngine --> Parser
@@ -154,7 +154,7 @@ flowchart TD
 
     ADKRunner --> Coordinator
     Coordinator --> Pipeline
-    Coordinator -.->|"Synthesizes Narrative"| LiteLLMBridge
+    Coordinator -.->|Synthesizes Narrative| LiteLLMBridge
     LiteLLMBridge --> GroqAPI
 
     Pipeline --> LocEngine
@@ -167,7 +167,7 @@ flowchart TD
     LocEngine -.-> FeatureStore
     MLEngine -.-> ModelArtifacts
     SHAPEngine -.-> ModelArtifacts
-    PlacesEngine -.->|"External REST"| GPlaces["Google Places REST API"]
+    PlacesEngine -.->|External REST| GPlaces["Google Places REST API"]
 
     Pipeline --> TakeawayBuilder
     TakeawayBuilder --> MySQL
@@ -320,12 +320,12 @@ sequenceDiagram
         Runner->>Coord: Runner.run_async(user_prompt)
         Coord->>Domain: Step 1: Location Context (density and spend)
         Domain-->>Coord: Location metrics dictionary
-        Coord->>Domain: Step 2: ML Prediction + SHAP Attribution
+        Coord->>Domain: Step 2: ML Prediction and SHAP Attribution
         Domain-->>Coord: Class probabilities and top SHAP factors
         Coord->>Domain: Step 3: Google Places Text Search
         Domain-->>Coord: Competitor list and ratings
         Coord->>Domain: Step 4: Opportunity Scoring Formula
-        Domain-->>Coord: Opportunity score (0-100) and signals
+        Domain-->>Coord: Opportunity score 0-100 and signals
         Coord->>Domain: Step 5: Deterministic Financial Simulation
         Domain-->>Coord: Monthly revenues, EBITDA profit, break-even
         Coord->>LLM: Synthesize executive takeaway via LiteLLM
@@ -368,47 +368,47 @@ $$\text{Location Context} \longrightarrow \text{ML Prediction \& SHAP} \longrigh
 
 ```mermaid
 flowchart TD
-    subgraph CoordinatorTier["Coordinator Tier (Google ADK)"]
+    subgraph CoordinatorTier ["Coordinator Tier - Google ADK"]
         CoordAgent["Coordinator Agent"]
-        CompositeTool["run_full_business_analysis<br/>(Deterministic Orchestrator)"]
+        CompositeTool["run_full_business_analysis"]
     end
 
-    subgraph SpecialistTier["Specialist Agent Tier"]
+    subgraph SpecialistTier ["Specialist Agent Tier"]
         LocAgent["location_agent"]
         PerfAgent["performance_agent"]
         CompAgent["competition_agent"]
         OppAgent["opportunity_agent"]
     end
 
-    subgraph EngineTier["Execution Engines & External Services"]
-        LocData["Zomato Feature Store (CSV)"]
-        RFModel["Random Forest (300 Trees) + SHAP"]
-        PlacesAPI["Google Places API (Nearby Search)"]
+    subgraph EngineTier ["Execution Engines and External Services"]
+        LocData["Zomato Feature Store - CSV"]
+        RFModel["Random Forest - 300 Trees and SHAP"]
+        PlacesAPI["Google Places API - Nearby Search"]
         OppLogic["Weighted Scoring Algorithm"]
         FinSim["Deterministic Financial Simulator"]
     end
 
-    subgraph SynthesisTier["Executive Synthesis"]
-        LiteLLM["LiteLLM Proxy (strip reasoning)"]
-        GroqLPU["Groq API (openai/gpt-oss-120b)"]
+    subgraph SynthesisTier ["Executive Synthesis"]
+        LiteLLM["LiteLLM Proxy - Strip Reasoning"]
+        GroqLPU["Groq API - openai/gpt-oss-120b"]
     end
 
     CoordAgent --> CompositeTool
-    CompositeTool -->|"1. Market Density & Spend"| LocAgent
-    CompositeTool -->|"2. Performance Class & SHAP"| PerfAgent
-    CompositeTool -->|"3. Live Competitor Discovery"| CompAgent
-    CompositeTool -->|"4. Opportunity Assessment"| OppAgent
-    CompositeTool -->|"5. Break-Even & P&L"| FinSim
+    CompositeTool -->|1. Market Density and Spend| LocAgent
+    CompositeTool -->|2. Performance Class and SHAP| PerfAgent
+    CompositeTool -->|3. Live Competitor Discovery| CompAgent
+    CompositeTool -->|4. Opportunity Assessment| OppAgent
+    CompositeTool -->|5. Break-Even and Unit Economics| FinSim
 
     LocAgent --> LocData
     PerfAgent --> RFModel
     CompAgent --> PlacesAPI
     OppAgent --> OppLogic
 
-    CompositeTool -->|"Combined Analytical Results"| CoordAgent
-    CoordAgent -->|"Strategic Prompting (100-120 words)"| LiteLLM
+    CompositeTool -->|Combined Analytical Results| CoordAgent
+    CoordAgent -->|Strategic Prompting 100-120 words| LiteLLM
     LiteLLM --> GroqLPU
-    GroqLPU -->|"Executive Commentary"| CoordAgent
+    GroqLPU -->|Executive Commentary| CoordAgent
 ```
 
 If the external LLM provider encounters an invalid key (403), unavailable model (404), or timeout, [`src/agent/adk_runner.py`](src/agent/adk_runner.py) catches the exception and executes `run_full_business_analysis` directly in Python. This ensures that analytical calculations and UI cards render without interruption.
@@ -453,25 +453,25 @@ BizAdvisor strictly separates **offline model development** from **online produc
 
 ```mermaid
 flowchart LR
-    subgraph Offline["Offline Model Training"]
-        Raw["Zomato Dataset<br/>(51,717 Records)"] --> Clean["Data Cleaning &<br/>Feature Engineering"]
-        Clean --> TrainSet["Processed Dataset<br/>(219 Engineered Features)"]
-        TrainSet --> Preprocessor["ColumnTransformer<br/>(OneHot + Scaler)"]
-        TrainSet --> Trainer["Random Forest Classifier<br/>(300 Decision Trees)"]
+    subgraph Offline ["Offline Model Training"]
+        Raw["Zomato Dataset - 51717 Records"] --> Clean["Data Cleaning and Feature Engineering"]
+        Clean --> TrainSet["Processed Dataset - 219 Engineered Features"]
+        TrainSet --> Preprocessor["ColumnTransformer - OneHot and Scaler"]
+        TrainSet --> Trainer["Random Forest Classifier - 300 Decision Trees"]
         Preprocessor --> ArtPre["models/zomato_preprocessor.pkl"]
         Trainer --> ArtModel["models/zomato_performance_model.pkl"]
     end
 
-    subgraph Online["Online Inference & Explainability"]
-        UserInput["User Business Concept<br/>(Cuisine, Cost, Locality)"] --> Impute["Feature Alignment &<br/>Location Context Lookup"]
-        ArtPre --> Transform["Apply Preprocessor<br/>(219 Features)"]
+    subgraph Online ["Online Inference and Explainability"]
+        UserInput["User Business Concept - Cuisine, Cost, Locality"] --> Impute["Feature Alignment and Context Lookup"]
+        ArtPre --> Transform["Apply Preprocessor - 219 Features"]
         Impute --> Transform
-        Transform --> Predict["Model Inference<br/>(300 Trees)"]
+        Transform --> Predict["Model Inference - 300 Trees"]
         ArtModel --> Predict
-        Predict --> Probs["Class Probabilities<br/>(High, Medium, Low)"]
+        Predict --> Probs["Class Probabilities - High, Medium, Low"]
         Predict --> Explainer["SHAP TreeExplainer"]
         ArtModel --> Explainer
-        Explainer --> ShapValues["Top Positive &<br/>Negative Contributors"]
+        Explainer --> ShapValues["Top Positive and Negative Contributors"]
     end
 ```
 
@@ -572,38 +572,38 @@ BizAdvisor uses **MySQL 8.0+** (`bizadvisor_db`), managed via SQLAlchemy 2.0 wit
 
 ```mermaid
 erDiagram
-    USERS ||--o{ CONVERSATIONS : "owns"
-    CONVERSATIONS ||--o{ MESSAGES : "contains"
+    USERS ||--o{ CONVERSATIONS : owns
+    CONVERSATIONS ||--o{ MESSAGES : contains
 
     USERS {
-        string id PK "UUID primary key"
-        string username UK "Unique username"
-        string email UK "Unique email address"
-        string hashed_password "Argon2id password hash"
-        datetime created_at "UTC creation timestamp"
-        datetime updated_at "UTC update timestamp"
-    end
+        string id PK
+        string username
+        string email
+        string hashed_password
+        datetime created_at
+        datetime updated_at
+    }
 
     CONVERSATIONS {
-        string id PK "UUID primary key"
-        string user_id FK "References users.id (ON DELETE CASCADE)"
-        string title "Conversation title"
-        datetime created_at "UTC creation timestamp"
-        datetime updated_at "UTC update timestamp"
-        datetime last_message_at "Sort index timestamp"
-        json parameters_json "Accumulated parameters"
-        json analysis_json "Structured analysis snapshot"
-    end
+        string id PK
+        string user_id FK
+        string title
+        datetime created_at
+        datetime updated_at
+        datetime last_message_at
+        string parameters_json
+        string analysis_json
+    }
 
     MESSAGES {
-        string id PK "UUID primary key"
-        string conversation_id FK "References conversations.id (ON DELETE CASCADE)"
-        string role "user or assistant"
-        text content "Message body / markdown"
-        string message_type "text, full, scenario, casual, needs_input"
-        json metadata_json "Card payloads & scenario deltas"
-        datetime created_at "Indexed with conversation_id"
-    end
+        string id PK
+        string conversation_id FK
+        string role
+        string content
+        string message_type
+        string metadata_json
+        datetime created_at
+    }
 ```
 
 * **`users` Table:** Stores user credentials and registration metadata.
@@ -627,7 +627,7 @@ erDiagram
 
 ## 18. API Documentation
 
-All protected endpoints require an `Authorization: Bearer <token>` header obtained from `/api/auth/login`.
+All protected endpoints require an `Authorization: Bearer {token}` header obtained from `/api/auth/login`.
 
 | Method | Endpoint | Auth | Rate Limit | Description |
 |---|---|:---:|:---:|---|
@@ -817,5 +817,5 @@ npm run build
 
 ## 25. Author Information
 
-**Tanay Chaturvedi**<br/>
+**Tanay Chaturvedi**
 AI & Machine Learning Engineering Student
