@@ -104,49 +104,49 @@ I selected the following technologies based on reliability, performance, and cle
 ## 6. System Architecture Diagram
 
 ```mermaid
-graph TD
+flowchart TD
     subgraph Client["Frontend Layer (React 19 + Vite)"]
-        UI[Chat Interface / App.jsx]
-        AuthUI[AuthModal.jsx]
-        Cards[Analysis Cards & Sliders]
-        LeafletMap[CompetitorModal.jsx (Leaflet)]
-        APIClient[services/api.js]
+        UI["Chat Interface (App.jsx)"]
+        AuthUI["Authentication (AuthModal.jsx)"]
+        Cards["Interactive Analysis Cards"]
+        LeafletMap["Competitor Map (Leaflet)"]
+        APIClient["API Client (services/api.js)"]
     end
 
-    subgraph Gateway["API & Security Gateway (FastAPI / server.py)"]
-        CORS[CORS & Security Headers]
-        Limiter[SlowAPI Rate Limiter]
-        AuthEngine[Argon2id & PyJWT Authentication]
-        Parser[Query & Intent Parser]
-        TakeawayBuilder[Business Takeaway Builder]
+    subgraph Gateway["API & Security Gateway (FastAPI)"]
+        CORS["CORS & Security Headers"]
+        Limiter["Rate Limiting (SlowAPI)"]
+        AuthEngine["Argon2id & JWT Auth"]
+        Parser["Query & Intent Parser"]
+        TakeawayBuilder["Takeaway & TTS Builder"]
     end
 
     subgraph Agents["Agent Orchestration (Google ADK & LiteLLM)"]
-        ADKRunner[ADK Runner (adk_runner.py)]
-        Coordinator[Coordinator Agent]
-        Pipeline[run_full_business_analysis]
-        LiteLLMBridge[LiteLLM Proxy (llm_config.py)]
-        GroqAPI[Groq API / GPT-OSS-120B]
+        ADKRunner["ADK Runner (adk_runner.py)"]
+        Coordinator["Coordinator Agent"]
+        Pipeline["run_full_business_analysis"]
+        LiteLLMBridge["LiteLLM Gateway"]
+        GroqAPI["Groq LPU (GPT-OSS-120B)"]
     end
 
     subgraph Engines["Domain Engines & Machine Learning"]
-        LocEngine[Location Context Engine]
-        MLEngine[Random Forest Classifier (300 Trees)]
-        SHAPEngine[SHAP TreeExplainer]
-        PlacesEngine[Google Places API v1]
-        OppEngine[Opportunity Scoring Engine]
-        FinEngine[Financial Simulator & Break-Even]
+        LocEngine["Location Context Engine"]
+        MLEngine["Random Forest (300 Trees)"]
+        SHAPEngine["SHAP TreeExplainer"]
+        PlacesEngine["Google Places API v1"]
+        OppEngine["Opportunity Scoring Engine"]
+        FinEngine["Financial Simulator"]
     end
 
-    subgraph Storage["Storage & Model Artifacts"]
-        MySQL[(MySQL: bizadvisor_db)]
-        ModelArtifacts[(models/*.pkl)]
-        FeatureStore[(data/processed/zomato_train.csv)]
+    subgraph Storage["Persistence & Model Store"]
+        MySQL[("MySQL: bizadvisor_db")]
+        ModelArtifacts[("models/*.pkl")]
+        FeatureStore[("data/processed/*.csv")]
     end
 
     UI --> APIClient
     AuthUI --> APIClient
-    APIClient -->|HTTPS + Bearer Token| CORS
+    APIClient -->|"HTTPS + Bearer Token"| CORS
     CORS --> Limiter
     Limiter --> AuthEngine
     AuthEngine --> Parser
@@ -154,7 +154,7 @@ graph TD
 
     ADKRunner --> Coordinator
     Coordinator --> Pipeline
-    Coordinator -.->|Synthesizes Commentary| LiteLLMBridge
+    Coordinator -.->|"Synthesizes Narrative"| LiteLLMBridge
     LiteLLMBridge --> GroqAPI
 
     Pipeline --> LocEngine
@@ -167,7 +167,7 @@ graph TD
     LocEngine -.-> FeatureStore
     MLEngine -.-> ModelArtifacts
     SHAPEngine -.-> ModelArtifacts
-    PlacesEngine -.->|External REST| GPlaces[Google Places REST API]
+    PlacesEngine -.->|"External REST"| GPlaces["Google Places REST API"]
 
     Pipeline --> TakeawayBuilder
     TakeawayBuilder --> MySQL
@@ -309,33 +309,33 @@ sequenceDiagram
     participant LLM as Groq (GPT-OSS-120B)
     participant DB as MySQL (bizadvisor_db)
 
-    User->>FE: Submits concept query ("Japanese cafe in Koramangala for ₹1800 for two...")
-    FE->>API: POST /api/chat (Bearer Token, message, session_id)
+    User->>FE: Submits concept query
+    FE->>API: POST /api/chat with Bearer Token
     API->>API: Verify JWT, check rate limit, extract 6 business attributes
-    alt Any of 6 required inputs missing or ambiguous
-        API-->>FE: Return status="needs_input" with checklist prompt
+    alt Missing or ambiguous attributes
+        API-->>FE: Return needs_input status with checklist prompt
         FE-->>User: Displays missing input guidance
-    else All 6 inputs valid
+    else All attributes valid
         API->>Runner: run_analysis_via_adk(params)
         Runner->>Coord: Runner.run_async(user_prompt)
-        Coord->>Domain: Step 1: Location Context (historical density & median spend)
+        Coord->>Domain: Step 1: Location Context (density and spend)
         Domain-->>Coord: Location metrics dictionary
-        Coord->>Domain: Step 2: ML Random Forest Prediction + SHAP Attribution
-        Domain-->>Coord: Prediction class, probabilities, top 5 SHAP factors
-        Coord->>Domain: Step 3: Google Places Text Search (nearby competitors)
-        Domain-->>Coord: Competitor list, average rating, landmark review counts
+        Coord->>Domain: Step 2: ML Prediction + SHAP Attribution
+        Domain-->>Coord: Class probabilities and top SHAP factors
+        Coord->>Domain: Step 3: Google Places Text Search
+        Domain-->>Coord: Competitor list and ratings
         Coord->>Domain: Step 4: Opportunity Scoring Formula
-        Domain-->>Coord: Opportunity score (0-100) & signal levels
+        Domain-->>Coord: Opportunity score (0-100) and signals
         Coord->>Domain: Step 5: Deterministic Financial Simulation
-        Domain-->>Coord: Monthly revenues, expenses, EBITDA profit, break-even target
-        Coord->>LLM: Synthesize 100-word executive takeaway & risks via LiteLLM
+        Domain-->>Coord: Monthly revenues, EBITDA profit, break-even
+        Coord->>LLM: Synthesize executive takeaway via LiteLLM
         LLM-->>Coord: Concise executive summary
         Coord-->>Runner: Full composite analysis dictionary
         Runner-->>API: Extracted analysis result
-        API->>API: Synchronize business_takeaway text for UI and TTS
-        API->>DB: Atomically persist conversation & message records
-        API-->>FE: Return 200 OK with analysis, takeaway, and commentary
-        FE-->>User: Renders Location, ML, Competition, Opportunity, Financial cards & Audio player
+        API->>API: Synchronize business_takeaway text
+        API->>DB: Atomically persist conversation and message
+        API-->>FE: Return 200 OK with analysis and takeaway
+        FE-->>User: Renders analysis cards and audio player
     end
 ```
 
@@ -365,6 +365,51 @@ In `src/agent/`, I declared 5 specialized agents:
 ### Guaranteed Execution Sequence & Automatic Fallback
 Relying purely on an LLM to call four independent tools in order introduces latency and ordering uncertainty. To solve this, I implemented `run_full_business_analysis` as a **composite orchestrator tool** registered directly on `coordinator_agent`. It enforces a strict, guaranteed sequential execution:
 $$\text{Location Context} \longrightarrow \text{ML Prediction \& SHAP} \longrightarrow \text{Competitor Search} \longrightarrow \text{Opportunity Scoring} \longrightarrow \text{Financial Simulation}$$
+
+```mermaid
+flowchart TD
+    subgraph CoordinatorTier["Coordinator Tier (Google ADK)"]
+        CoordAgent["Coordinator Agent"]
+        CompositeTool["run_full_business_analysis<br/>(Deterministic Orchestrator)"]
+    end
+
+    subgraph SpecialistTier["Specialist Agent Tier"]
+        LocAgent["location_agent"]
+        PerfAgent["performance_agent"]
+        CompAgent["competition_agent"]
+        OppAgent["opportunity_agent"]
+    end
+
+    subgraph EngineTier["Execution Engines & External Services"]
+        LocData["Zomato Feature Store (CSV)"]
+        RFModel["Random Forest (300 Trees) + SHAP"]
+        PlacesAPI["Google Places API (Nearby Search)"]
+        OppLogic["Weighted Scoring Algorithm"]
+        FinSim["Deterministic Financial Simulator"]
+    end
+
+    subgraph SynthesisTier["Executive Synthesis"]
+        LiteLLM["LiteLLM Proxy (strip reasoning)"]
+        GroqLPU["Groq API (openai/gpt-oss-120b)"]
+    end
+
+    CoordAgent --> CompositeTool
+    CompositeTool -->|"1. Market Density & Spend"| LocAgent
+    CompositeTool -->|"2. Performance Class & SHAP"| PerfAgent
+    CompositeTool -->|"3. Live Competitor Discovery"| CompAgent
+    CompositeTool -->|"4. Opportunity Assessment"| OppAgent
+    CompositeTool -->|"5. Break-Even & P&L"| FinSim
+
+    LocAgent --> LocData
+    PerfAgent --> RFModel
+    CompAgent --> PlacesAPI
+    OppAgent --> OppLogic
+
+    CompositeTool -->|"Combined Analytical Results"| CoordAgent
+    CoordAgent -->|"Strategic Prompting (100-120 words)"| LiteLLM
+    LiteLLM --> GroqLPU
+    GroqLPU -->|"Executive Commentary"| CoordAgent
+```
 
 If the external LLM provider encounters an invalid key (403), unavailable model (404), or timeout, [`src/agent/adk_runner.py`](src/agent/adk_runner.py) catches the exception and executes `run_full_business_analysis` directly in Python. This ensures that analytical calculations and UI cards render without interruption.
 
@@ -405,6 +450,30 @@ In [`src/ml/explainer.py`](src/ml/explainer.py), I used `shap.TreeExplainer` on 
 BizAdvisor strictly separates **offline model development** from **online production serving**:
 * **Offline Development (`notebooks/01` to `05`):** Raw data ingestion, currency cleaning, missing value imputation, feature engineering, and model training were conducted offline once.
 * **Online Serving (`server.py`):** The production backend **never** trains or retrains models during user requests or on application startup. It loads the pre-compiled `.pkl` artifacts into memory at startup and runs read-only inference.
+
+```mermaid
+flowchart LR
+    subgraph Offline["Offline Model Training"]
+        Raw["Zomato Dataset<br/>(51,717 Records)"] --> Clean["Data Cleaning &<br/>Feature Engineering"]
+        Clean --> TrainSet["Processed Dataset<br/>(219 Engineered Features)"]
+        TrainSet --> Preprocessor["ColumnTransformer<br/>(OneHot + Scaler)"]
+        TrainSet --> Trainer["Random Forest Classifier<br/>(300 Decision Trees)"]
+        Preprocessor --> ArtPre["models/zomato_preprocessor.pkl"]
+        Trainer --> ArtModel["models/zomato_performance_model.pkl"]
+    end
+
+    subgraph Online["Online Inference & Explainability"]
+        UserInput["User Business Concept<br/>(Cuisine, Cost, Locality)"] --> Impute["Feature Alignment &<br/>Location Context Lookup"]
+        ArtPre --> Transform["Apply Preprocessor<br/>(219 Features)"]
+        Impute --> Transform
+        Transform --> Predict["Model Inference<br/>(300 Trees)"]
+        ArtModel --> Predict
+        Predict --> Probs["Class Probabilities<br/>(High, Medium, Low)"]
+        Predict --> Explainer["SHAP TreeExplainer"]
+        ArtModel --> Explainer
+        Explainer --> ShapValues["Top Positive &<br/>Negative Contributors"]
+    end
+```
 
 ### Target Formulation
 In [`notebooks/04_zomato_feature_engineering.ipynb`](notebooks/04_zomato_feature_engineering.ipynb), I formulated the commercial performance target from 51,700+ historical records:
@@ -507,34 +576,34 @@ erDiagram
     CONVERSATIONS ||--o{ MESSAGES : "contains"
 
     USERS {
-        VARCHAR(64) id PK "UUID"
-        VARCHAR(50) username UK "Unique index"
-        VARCHAR(255) email UK "Unique index"
-        VARCHAR(255) hashed_password "Argon2id hash"
-        DATETIME created_at "UTC timestamp"
-        DATETIME updated_at "UTC timestamp"
-    }
+        string id PK "UUID primary key"
+        string username UK "Unique username"
+        string email UK "Unique email address"
+        string hashed_password "Argon2id password hash"
+        datetime created_at "UTC creation timestamp"
+        datetime updated_at "UTC update timestamp"
+    end
 
     CONVERSATIONS {
-        VARCHAR(64) id PK "UUID"
-        VARCHAR(64) user_id FK "References users.id (ON DELETE CASCADE)"
-        VARCHAR(255) title "Conversation Title"
-        DATETIME created_at "Creation timestamp"
-        DATETIME updated_at "Update timestamp"
-        DATETIME last_message_at "Sort index"
-        JSON parameters_json "Accumulated parameters"
-        JSON analysis_json "Latest structured analysis snapshot"
-    }
+        string id PK "UUID primary key"
+        string user_id FK "References users.id (ON DELETE CASCADE)"
+        string title "Conversation title"
+        datetime created_at "UTC creation timestamp"
+        datetime updated_at "UTC update timestamp"
+        datetime last_message_at "Sort index timestamp"
+        json parameters_json "Accumulated parameters"
+        json analysis_json "Structured analysis snapshot"
+    end
 
     MESSAGES {
-        VARCHAR(64) id PK "UUID"
-        VARCHAR(64) conversation_id FK "References conversations.id (ON DELETE CASCADE)"
-        VARCHAR(20) role "'user' or 'assistant'"
-        TEXT content "Message body / markdown"
-        VARCHAR(50) message_type "'text', 'full', 'scenario', 'casual', 'needs_input'"
-        JSON metadata_json "Card payloads & scenario deltas"
-        DATETIME created_at "Indexed with conversation_id"
-    }
+        string id PK "UUID primary key"
+        string conversation_id FK "References conversations.id (ON DELETE CASCADE)"
+        string role "user or assistant"
+        text content "Message body / markdown"
+        string message_type "text, full, scenario, casual, needs_input"
+        json metadata_json "Card payloads & scenario deltas"
+        datetime created_at "Indexed with conversation_id"
+    end
 ```
 
 * **`users` Table:** Stores user credentials and registration metadata.
