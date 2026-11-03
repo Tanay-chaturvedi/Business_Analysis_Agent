@@ -1,154 +1,598 @@
-# BizAdvisor — AI Business Advisory Agent
+# BizAdvisor: AI-Based Business Opportunity Assessment & Advisory System
 
-An enterprise-grade, full-stack **Business Advisory Agent** and decision-support platform designed to evaluate restaurant and hospitality business ventures. BizAdvisor integrates **Google ADK multi-agent orchestration**, a **Random Forest machine learning model**, **SHAP explainability**, live **Google Places competitor intelligence**, an assumption-driven **financial simulator**, and interactive **What-If scenario analysis** with a modern **React 19** frontend and a secured **FastAPI / MySQL** backend.
-
----
-
-## 1. Key Features
-
-* **Conversational Business Advisory:** Interactive AI chat experience that extracts business concepts (location, cuisine, cost for two, dining type) and provides structured feasibility reports.
-* **Google ADK Multi-Agent Orchestration:** Specialized agents (Coordinator, Location, Performance, Competition, and Opportunity) orchestrated via Google Agent Development Kit (ADK) with flexible LLM providers (Groq / Gemini / OpenAI compatible).
-* **Machine Learning Performance Prediction:** Pre-trained Random Forest classifier estimating restaurant performance category and success probability based on historical market trends.
-* **SHAP Explainability:** TreeExplainer-driven feature attribution showing top positive and negative contributors behind each performance prediction.
-* **Google Places Competitor Discovery:** Live nearby competitor discovery capturing business names, ratings, review counts, price levels, and coordinates with deterministic fallback logic.
-* **Location Intelligence:** Geospatial context evaluating historical restaurant density, median spend, cuisine diversity, and online ordering adoption.
-* **Deterministic Financial Simulator:** Transparent revenue, variable expense, itemized fixed costs, operating profit (EBITDA proxy), margin, and contribution-margin break-even analysis with editable assumption sliders.
-* **What-If Scenario Simulator:** Dynamic comparative scenario modeling allowing entrepreneurs to simulate changes in cost for two, table booking, or online ordering before committing capital.
-* **Enterprise Security & Authentication:** User registration and login powered by Argon2id password hashing, signed JWT bearer tokens with strict configuration validation, IP rate-limiting on sensitive auth routes (`slowapi`), and strict CORS controls.
-* **User-Scoped Conversation Persistence:** Persistent conversation and message history stored in MySQL with foreign key cascading and strict ownership enforcement preventing cross-user data leakage.
+BizAdvisor is a full-stack, machine learning-driven decision support system that I developed to evaluate restaurant and hospitality business concepts. The platform combines offline-trained predictive machine learning, real-time geospatial competitor discovery, management accounting principles, and multi-agent LLM orchestration to provide aspiring entrepreneurs and operators with data-backed feasibility reports before investing capital.
 
 ---
 
-## 2. Technology Stack
+## 1. Project Title & Introduction
+
+**BizAdvisor: AI-Based Business Opportunity Assessment & Advisory System**<br/>
+**Author:** Tanay Chaturvedi (AI & Machine Learning Engineering Student)
+
+When evaluating a new restaurant idea, operators are typically forced to choose between black-box statistical reports, expensive market research consultants, or generic conversational chatbots that lack real domain data and mathematical consistency.
+
+I designed BizAdvisor as an integrated advisory system that bridges this gap. It captures high-level business ideas through natural conversation, validates essential commercial variables, runs historical machine learning predictions, queries live nearby competitor density via Google Places, calculates deterministic unit economics, and synthesizes executive advisory takeaways through Google ADK agents and Groq-hosted open-weights reasoning models.
+
+---
+
+## 2. Why I Built BizAdvisor
+
+During my research into hospitality unit economics and local commerce datasets, I noticed a consistent pattern: a significant percentage of independent restaurants fail not because their food is poor, but because their fundamental business assumptions are flawed before they open their doors.
+
+Common miscalculations include:
+* Opening a high-ticket fine dining concept in an area where local spend is concentrated in budget delivery.
+* Underestimating local competition by ignoring entrenched landmark competitors with thousands of reviews.
+* Misunderstanding break-even requirements and having no idea how many customers per day are needed to cover fixed rents and payroll.
+* Lacking a way to run rapid "What-If" scenario tests (e.g., "What if our rent is ₹20,000 higher than budgeted?" or "What if customer volume drops by 25%?").
+
+I built BizAdvisor to turn these scattered analytical tasks into a single automated, data-grounded workflow.
+
+---
+
+## 3. Problem Statement
+
+Independent food service ventures operate on tight operating margins, often between 10% and 20%. A single unvalidated assumption regarding rent, average customer spend, or competitor saturation can quickly lead to insolvency.
+
+Traditional approaches have severe shortcomings:
+1. **Generic AI Chatbots:** Unconstrained LLMs frequently hallucinate financial figures, invent non-existent competitor names, and cannot calculate accurate break-even math.
+2. **Static Spreadsheets:** While spreadsheets allow financial modeling, they operate in a vacuum without context on local market demand, historical failure rates, or actual nearby competitors.
+3. **Manual Market Research:** Collecting competitor ratings, review counts, and local pricing trends across physical neighborhoods is slow, expensive, and difficult to scale.
+
+BizAdvisor addresses these limitations by coupling deterministic machine learning and live APIs with a conversational multi-agent architecture. The LLM does not perform mathematical or statistical calculations; instead, it orchestrates verified Python domain tools and synthesizes clear strategic commentary.
+
+---
+
+## 4. Key Features
+
+* **Conversational Parameter Extraction:** Automatically extracts and validates the 6 required business attributes from user queries (`location`, `cuisine`, `restaurant_type`, `approx_cost_for_two`, `online_order`, `book_table`). If inputs are missing or ambiguous, the system halts execution and prompts the user with a focused checklist.
+* **Google ADK Multi-Agent Orchestration:** Structured agent architecture using the Google Agent Development Kit (`google-adk`), coordinating specialist tools in a guaranteed, deterministic pipeline.
+* **Sub-Second LLM Synthesis via Groq & LiteLLM:** Uses Groq's high-speed inference engine to serve `openai/gpt-oss-120b` via LiteLLM for concise executive takeaways, risk identification, and strategic recommendations.
+* **Deterministic ML Performance Prediction:** A 300-tree Random Forest classifier trained on historical market data predicting commercial performance tiers (`High`, `Medium`, `Low`).
+* **SHAP Explainability (TreeExplainer):** Explains model predictions by identifying the top 5 positive and negative contributing factors for every concept.
+* **Live Nearby Competitor Discovery:** Queries Google Places API v1 (`places:searchText`) in real time within a 3 km radius to analyze competitor density, average ratings, and landmark review volumes.
+* **Calibrated Opportunity Scoring:** Mathematical 0–100 index synthesizing historical ML success probability and local competitive saturation into a single actionable metric.
+* **Deterministic Financial Simulator:** Projects monthly revenues, itemized fixed expenses, variable food costs, operating profit (EBITDA proxy), margins, and daily break-even customer targets.
+* **Interactive Client-Side Sliders:** The React frontend mirrors the backend financial engine, allowing users to modify footfall, rents, and food cost percentages with instant recalculation.
+* **What-If Scenario Simulator:** Dedicated comparative modeling engine comparing baseline concepts against modified parameters side-by-side.
+* **Enterprise Security & Isolation:** User registration and login powered by Argon2id password hashing, signed PyJWT access tokens, SlowAPI rate limiting, and strict user-scoped MySQL isolation.
+* **In-Browser Audio Takeaway:** Integrated Web Speech API audio player that reads the synchronized business takeaway aloud directly in the browser.
+
+---
+
+## 5. Actual Technology Stack
+
+I selected the following technologies based on reliability, performance, and clear separation of concerns:
 
 ### Frontend
-* **Framework:** React 19 (Single Page Application)
-* **Build Tool:** Vite
-* **Styling:** Tailwind CSS / Vanilla CSS with glassmorphism, responsive grid layouts, and dark/light modes
-* **Icons:** Lucide React
-* **HTTP Client:** Native Fetch / Custom API Service with bearer token authorization
+* **Core Framework:** React 19 (`react: ^19.2.8`, `react-dom: ^19.2.8`)
+* **Build Tool:** Vite 8 (`vite: ^8.3.0`, `@vitejs/plugin-react: ^6.1.1`)
+* **Styling:** Tailwind CSS v4 (`tailwindcss: ^4.3.3`, `@tailwindcss/vite: ^4.3.3`)
+* **Interactive Maps:** Leaflet & React-Leaflet (`leaflet: ^1.9.4`, `react-leaflet: ^5.0.0`)
+* **Icons:** Lucide React (`lucide-react: ^1.48.0`)
+* **Data Visualization:** Recharts (`recharts: ^3.10.1`) and custom SVG/CSS meters
+* **Audio Synthesis:** HTML5 Web Speech Synthesis API (`window.speechSynthesis`)
 
 ### Backend & API
-* **Web Framework:** FastAPI (ASGI)
-* **Server:** Uvicorn
-* **Data Validation:** Pydantic v2
-* **Authentication:** PyJWT (HS256 tokens) & Argon2id (`argon2-cffi`)
-* **Rate Limiting:** SlowAPI (Redis / In-memory token bucket)
-* **Agent Framework:** Google ADK (`google-adk`), Google GenAI (`google-genai`), and LiteLLM (`litellm`)
+* **Web Framework:** FastAPI (`fastapi==0.141.1`)
+* **ASGI Server:** Uvicorn (`uvicorn==0.52.1`)
+* **Data Validation:** Pydantic v2 (`pydantic==2.13.4`, `pydantic-settings==2.15.0`)
+* **Password Hashing:** Argon2id (`argon2-cffi==25.1.0`)
+* **Authentication:** PyJWT (`PyJWT==2.15.1`)
+* **Rate Limiting:** SlowAPI (`slowapi==0.1.10`)
+* **HTTP Clients:** Requests (`requests==2.34.2`) and HTTPX (`httpx==0.28.1`)
 
-### Database & Persistence
-* **Relational Database:** MySQL 8.0+
-* **ORM:** SQLAlchemy 2.0+
-* **Driver:** PyMySQL
+### Multi-Agent Orchestration & LLM
+* **Agent Framework:** Google Agent Development Kit (`google-adk==2.6.3`)
+* **LLM Gateway:** LiteLLM (`litellm==1.97.0`)
+* **Inference Provider:** Groq API (`groq>=0.11.0`)
+* **Primary Reasoning Model:** `openai/gpt-oss-120b` (open-weights 120B parameter model hosted on Groq LPUs)
 
 ### Machine Learning & Data Science
-* **Classifier:** Scikit-Learn (Random Forest Classifier) & XGBoost
-* **Explainability:** SHAP (TreeExplainer)
-* **Data Processing:** Pandas, NumPy, Scipy, Joblib
-* **Spatial & Geometry:** GeoPandas, Shapely, OSMnx
+* **Classifier:** Scikit-Learn Random Forest Classifier (`scikit-learn==1.9.0`)
+* **Model Explainability:** SHAP TreeExplainer (`shap==0.52.0`)
+* **Artifact Serialization:** Joblib (`joblib==1.5.3`)
+* **Data Processing:** Pandas (`pandas==3.0.5`), NumPy (`numpy==2.5.2`), SciPy (`scipy==1.18.0`)
+* **Model Evaluation Baseline:** XGBoost (`xgboost==3.4.0`)
+
+### Database & Storage
+* **Relational Database:** MySQL 8.0+ (`bizadvisor_db`)
+* **ORM:** SQLAlchemy 2.0 (`SQLAlchemy==2.1.4`)
+* **Database Driver:** PyMySQL (`PyMySQL==1.2.3`)
 
 ---
 
-## 3. Project Architecture & Directory Structure
+## 6. System Architecture Diagram
+
+```mermaid
+graph TD
+    subgraph Client["Frontend Layer (React 19 + Vite)"]
+        UI[Chat Interface / App.jsx]
+        AuthUI[AuthModal.jsx]
+        Cards[Analysis Cards & Sliders]
+        LeafletMap[CompetitorModal.jsx (Leaflet)]
+        APIClient[services/api.js]
+    end
+
+    subgraph Gateway["API & Security Gateway (FastAPI / server.py)"]
+        CORS[CORS & Security Headers]
+        Limiter[SlowAPI Rate Limiter]
+        AuthEngine[Argon2id & PyJWT Authentication]
+        Parser[Query & Intent Parser]
+        TakeawayBuilder[Business Takeaway Builder]
+    end
+
+    subgraph Agents["Agent Orchestration (Google ADK & LiteLLM)"]
+        ADKRunner[ADK Runner (adk_runner.py)]
+        Coordinator[Coordinator Agent]
+        Pipeline[run_full_business_analysis]
+        LiteLLMBridge[LiteLLM Proxy (llm_config.py)]
+        GroqAPI[Groq API / GPT-OSS-120B]
+    end
+
+    subgraph Engines["Domain Engines & Machine Learning"]
+        LocEngine[Location Context Engine]
+        MLEngine[Random Forest Classifier (300 Trees)]
+        SHAPEngine[SHAP TreeExplainer]
+        PlacesEngine[Google Places API v1]
+        OppEngine[Opportunity Scoring Engine]
+        FinEngine[Financial Simulator & Break-Even]
+    end
+
+    subgraph Storage["Storage & Model Artifacts"]
+        MySQL[(MySQL: bizadvisor_db)]
+        ModelArtifacts[(models/*.pkl)]
+        FeatureStore[(data/processed/zomato_train.csv)]
+    end
+
+    UI --> APIClient
+    AuthUI --> APIClient
+    APIClient -->|HTTPS + Bearer Token| CORS
+    CORS --> Limiter
+    Limiter --> AuthEngine
+    AuthEngine --> Parser
+    Parser --> ADKRunner
+
+    ADKRunner --> Coordinator
+    Coordinator --> Pipeline
+    Coordinator -.->|Synthesizes Commentary| LiteLLMBridge
+    LiteLLMBridge --> GroqAPI
+
+    Pipeline --> LocEngine
+    Pipeline --> MLEngine
+    Pipeline --> SHAPEngine
+    Pipeline --> PlacesEngine
+    Pipeline --> OppEngine
+    Pipeline --> FinEngine
+
+    LocEngine -.-> FeatureStore
+    MLEngine -.-> ModelArtifacts
+    SHAPEngine -.-> ModelArtifacts
+    PlacesEngine -.->|External REST| GPlaces[Google Places REST API]
+
+    Pipeline --> TakeawayBuilder
+    TakeawayBuilder --> MySQL
+    TakeawayBuilder --> UI
+    UI --> Cards
+    Cards --> LeafletMap
+```
+
+---
+
+## 7. Repository Structure
 
 ```text
 Business_Analysis_Agent/
-├── .env.example                     # Environment configuration template
-├── README.md                        # Project documentation
-├── requirements.txt                 # Backend Python dependencies
-├── server.py                        # FastAPI main application & API routes
+├── .env                              # Active environment variables (git-ignored)
+├── .env.example                      # Template configuration file
+├── .gitignore                        # Git exclusion rules for secrets, venv, and large files
+├── README.md                         # Project documentation
+├── requirements.txt                  # Pinned backend and ML Python dependencies
+├── server.py                         # FastAPI server, API endpoints, parameter parsing
 │
 ├── data/
-│   ├── processed/
-│   │   └── zomato_train_engineered.csv  # Runtime feature store for location context
-│   └── backups/                     # Safety backups of database dumps (git-ignored)
+│   ├── backups/                      # JSON database snapshots (git-ignored)
+│   │   └── bizadvisor_mysql_backup_20261021_164513.json
+│   ├── processed/                    # Cleaned datasets and feature stores (git-ignored)
+│   │   ├── zomato_cleaned.csv        # Cleaned dataset
+│   │   ├── zomato_test_engineered.csv# Test split evaluation data
+│   │   └── zomato_train_engineered.csv# Runtime feature store for location context
+│   ├── raw/
+│   │   └── zomato.csv                # Raw Kaggle Zomato dataset (547MB, git-ignored)
+│   └── bizadvisor_history.db         # Archived development SQLite database
+│
+├── frontend/                         # React 19 + Vite frontend
+│   ├── index.html                    # HTML entry point with Leaflet styling
+│   ├── package.json                  # Frontend dependencies and npm scripts
+│   ├── vite.config.js                # Vite build and proxy settings
+│   └── src/
+│       ├── App.jsx                   # Central React container and state management
+│       ├── App.css                   # Global styles and layout rules
+│       ├── index.css                 # Base theme and glassmorphism styling
+│       ├── main.jsx                  # React DOM rendering entry point
+│       ├── components/
+│       │   ├── Analysis/             # Domain visualization cards
+│       │   │   ├── CompetitionCard.jsx   # Competitor distribution and map trigger
+│       │   │   ├── FinancialCard.jsx     # Financial metrics and interactive sliders
+│       │   │   ├── LocationCard.jsx      # Historical location market statistics
+│       │   │   ├── OpportunityCard.jsx   # Opportunity score gauge (0-100)
+│       │   │   ├── PerformanceCard.jsx   # ML prediction, probabilities & SHAP bars
+│       │   │   ├── ScenarioCard.jsx      # What-If side-by-side comparison card
+│       │   │   └── WhatThisMeansCard.jsx # Plain-English summary & TTS player
+│       │   ├── AudioPlayer/
+│       │   │   └── TextToSpeechButton.jsx# Web Speech API listen/pause/stop controls
+│       │   ├── Auth/
+│       │   │   └── AuthModal.jsx         # User login and registration modal
+│       │   ├── Chat/
+│       │   │   ├── AnalysisProgress.jsx  # Multi-stage loading progress stepper
+│       │   │   ├── ChatInput.jsx         # Query input box & location selector pill
+│       │   │   ├── ChatMessage.jsx       # Message container with inline Markdown rendering
+│       │   │   ├── EmptyState.jsx        # Starter prompt chips
+│       │   │   └── Header.jsx            # Top navbar, theme toggle & session title
+│       │   ├── Location/
+│       │   │   └── LocationPicker.jsx    # Selection modal with 25 curated Bengaluru areas
+│       │   ├── Map/
+│       │   │   └── CompetitorModal.jsx   # Leaflet map displaying competitor markers
+│       │   ├── Scenario/
+│       │   │   └── ScenarioModal.jsx     # Parameter customization modal for What-If tests
+│       │   └── Sidebar/
+│       │       └── Sidebar.jsx           # Collapsible session history & user profile
+│       ├── data/
+│       │   └── locations.js          # Canonical list of Bengaluru localities
+│       ├── hooks/
+│       │   └── useTextToSpeech.js    # Custom React hook for speech synthesis
+│       └── services/
+│           └── api.js                # Frontend API client with JWT token injection
 │
 ├── models/
-│   ├── zomato_performance_model.pkl # Trained Random Forest classifier
-│   └── zomato_preprocessor.pkl      # Feature encoding and scaling pipeline
+│   ├── zomato_performance_model.pkl  # Trained 300-tree Random Forest classifier (276MB)
+│   └── zomato_preprocessor.pkl       # Feature encoding & scaling pipeline (6.5KB, tracked)
 │
-├── notebooks/                       # Provenance: Offline exploration & training
-│   ├── 01_zomato_exploration.ipynb
-│   ├── 02_zomato_cleaning.ipynb
-│   ├── 03_zomato_eda.ipynb
-│   ├── 04_zomato_feature_engineering.ipynb
-│   ├── 05_zomato_model_training.ipynb
-│   └── 06_google_places_competition.ipynb
+├── notebooks/                        # Provenance: Offline exploration, feature eng & training
+│   ├── 01_zomato_exploration.ipynb   # Raw schema and missingness inspection
+│   ├── 02_zomato_cleaning.ipynb      # Currency conversion, categorical cleaning
+│   ├── 03_zomato_eda.ipynb           # Exploratory distributions and correlations
+│   ├── 04_zomato_feature_engineering.ipynb # Target construction & ColumnTransformer pipeline
+│   ├── 05_zomato_model_training.ipynb# Model training, hyperparameter tuning & SHAP validation
+│   └── 06_google_places_competition.ipynb # Google Places API prototyping and threshold testing
 │
-├── scripts/                         # Maintenance & migration utilities
-│   ├── backup_database.py           # Database backup utility script
-│   ├── migrate_add_users.py         # Migration adding user authentication schema
-│   └── migrate_sqlite_to_mysql.py   # Historical SQLite to MySQL migration script
+├── scripts/                          # Administrative and migration utilities
+│   ├── backup_database.py            # JSON backup tool for MySQL tables
+│   ├── migrate_add_users.py          # Migration adding user authentication schema
+│   └── migrate_sqlite_to_mysql.py    # Idempotent migration from SQLite to MySQL
 │
-├── src/                             # Core backend application modules
-│   ├── auth.py                      # Argon2id hashing, JWT validation, auth dependencies
-│   ├── database.py                  # SQLAlchemy engine, session maker, and ORM models
-│   ├── agent/                       # Google ADK multi-agent system
-│   │   ├── coordinator_agent.py     # Master coordinator orchestrating workflow
-│   │   ├── competition_agent.py     # Competitor discovery agent
-│   │   ├── location_agent.py        # Location analysis agent
-│   │   ├── opportunity_agent.py     # Opportunity synthesis agent
-│   │   ├── performance_agent.py     # ML prediction and explainability agent
-│   │   ├── adk_runner.py            # ADK execution runtime bridge
-│   │   └── llm_config.py            # LiteLLM / Gemini model configuration
-│   ├── analysis/
-│   │   ├── location_context.py      # Runtime location statistics lookup
-│   │   ├── opportunity.py           # Opportunity scoring logic
-│   │   └── what_if.py               # Scenario simulation engine
+├── src/                              # Core Python backend source
+│   ├── auth.py                       # Argon2id password hashing, JWT creation & verification
+│   ├── database.py                   # SQLAlchemy engine, connection pool, models, and CRUD
+│   ├── agent/                        # Google ADK agent definitions & runner
+│   │   ├── adk_runner.py             # ADK Runner execution driver with automatic fallback
+│   │   ├── agent.py                  # Exports root_agent = coordinator_agent
+│   │   ├── competition_agent.py      # Specialized competition analysis agent
+│   │   ├── coordinator_agent.py      # Master orchestrator & run_full_business_analysis tool
+│   │   ├── llm_config.py             # LiteLLM Groq provider setup and message sanitizer
+│   │   ├── location_agent.py         # Specialized location context agent
+│   │   ├── opportunity_agent.py      # Specialized opportunity assessment agent
+│   │   └── performance_agent.py      # Specialized ML prediction and SHAP agent
+│   ├── analysis/                     # Domain analytical calculations
+│   │   ├── location_context.py       # Reads location statistics from feature store
+│   │   ├── opportunity.py            # Mathematical opportunity scoring equation
+│   │   └── what_if.py                # Scenario delta comparisons (financial & ML)
 │   ├── finance/
-│   │   └── simulator.py             # Deterministic financial modeling & break-even engine
+│   │   └── simulator.py              # Deterministic financial model and break-even engine
 │   ├── ml/
-│   │   ├── predictor.py             # Model inference wrapper
-│   │   └── explainer.py             # SHAP explanation generator
+│   │   ├── explainer.py              # SHAP TreeExplainer feature contribution wrapper
+│   │   └── predictor.py              # Model inference wrapper for Random Forest
 │   └── places/
-│       └── competition.py           # Google Places API integration & fallback
+│       └── competition.py            # Google Places API v1 text search & summarizer
 │
-├── tests/                           # Automated regression & integration test suite
-│   ├── test_financial_accuracy.py   # 11 tests for financial accuracy and break-even
-│   ├── test_security.py             # 14 tests for auth, JWT, rate-limiting, and isolation
-│   ├── test_mysql_integration.py    # 4 tests for database CRUD and cascading
-│   └── test_mysql_regression.py     # 4 tests for session lifecycles and recovery
-│
-└── frontend/                        # React 19 + Vite frontend application
-    ├── index.html                   # HTML entry point
-    ├── package.json                 # Node dependencies and scripts
-    ├── vite.config.js               # Vite bundler configuration
-    └── src/
-        ├── App.jsx                  # Root React application component
-        ├── components/
-        │   ├── Analysis/            # FinancialCard, PerformanceCard, CompetitorCard, etc.
-        │   ├── Auth/                # AuthModal (Login & Registration)
-        │   ├── Chat/                # ChatMessage, ChatInput, AnalysisProgress
-        │   ├── Map/                 # Competitor modal and location views
-        │   ├── Scenario/            # What-If scenario comparison modal
-        │   └── Sidebar/             # Conversation history sidebar
-        └── services/
-            └── api.js               # Centralized frontend API client
+└── tests/                            # Automated test suite (33 passing tests)
+    ├── test_financial_accuracy.py    # 11 tests verifying financial formulas & break-even
+    ├── test_mysql_integration.py     # 4 tests for MySQL CRUD, relationships & cascade
+    ├── test_mysql_regression.py      # 4 tests for transaction handling & StaleDataError
+    └── test_security.py              # 14 tests for Argon2id, JWT, rate limiting & isolation
 ```
 
 ---
 
-## 4. Prerequisites for Development
+## 8. Complete End-to-End Workflow
 
-* **Operating System:** Windows 10/11 (or Linux/macOS with equivalent shell commands)
-* **Python:** Python 3.11, 3.12, or 3.13 (64-bit)
-* **Node.js:** Node.js v18.0+ or v20.0+ and `npm`
-* **Database:** MySQL Server 8.0+ running locally or accessible remotely
-* **External API Keys (Optional but Recommended):**
-  * Google Maps / Places API key (for live competitor discovery).
-  * Groq API key or Google Gemini API key (for Google ADK conversational reasoning).
+When a user submits a business concept, the system executes this end-to-end pipeline:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Business Owner
+    participant FE as React Frontend
+    participant API as FastAPI (server.py)
+    participant Runner as ADK Runner (adk_runner.py)
+    participant Coord as Coordinator Agent
+    participant Domain as Domain Engines (ML, Places, Finance)
+    participant LLM as Groq (GPT-OSS-120B)
+    participant DB as MySQL (bizadvisor_db)
+
+    User->>FE: Submits concept query ("Japanese cafe in Koramangala for ₹1800 for two...")
+    FE->>API: POST /api/chat (Bearer Token, message, session_id)
+    API->>API: Verify JWT, check rate limit, extract 6 business attributes
+    alt Any of 6 required inputs missing or ambiguous
+        API-->>FE: Return status="needs_input" with checklist prompt
+        FE-->>User: Displays missing input guidance
+    else All 6 inputs valid
+        API->>Runner: run_analysis_via_adk(params)
+        Runner->>Coord: Runner.run_async(user_prompt)
+        Coord->>Domain: Step 1: Location Context (historical density & median spend)
+        Domain-->>Coord: Location metrics dictionary
+        Coord->>Domain: Step 2: ML Random Forest Prediction + SHAP Attribution
+        Domain-->>Coord: Prediction class, probabilities, top 5 SHAP factors
+        Coord->>Domain: Step 3: Google Places Text Search (nearby competitors)
+        Domain-->>Coord: Competitor list, average rating, landmark review counts
+        Coord->>Domain: Step 4: Opportunity Scoring Formula
+        Domain-->>Coord: Opportunity score (0-100) & signal levels
+        Coord->>Domain: Step 5: Deterministic Financial Simulation
+        Domain-->>Coord: Monthly revenues, expenses, EBITDA profit, break-even target
+        Coord->>LLM: Synthesize 100-word executive takeaway & risks via LiteLLM
+        LLM-->>Coord: Concise executive summary
+        Coord-->>Runner: Full composite analysis dictionary
+        Runner-->>API: Extracted analysis result
+        API->>API: Synchronize business_takeaway text for UI and TTS
+        API->>DB: Atomically persist conversation & message records
+        API-->>FE: Return 200 OK with analysis, takeaway, and commentary
+        FE-->>User: Renders Location, ML, Competition, Opportunity, Financial cards & Audio player
+    end
+```
 
 ---
 
-## 5. Installation & Setup
+## 9. Google ADK Agent Architecture
+
+### Google ADK vs. LiteLLM vs. Groq vs. GPT-OSS-120B
+
+To understand the agent tier, it is important to distinguish the specific roles of these four components:
+
+| Technology | Architectural Role | Responsibility in BizAdvisor |
+|---|---|---|
+| **Google ADK (`google-adk`)** | Agent Framework | Defines agent instances (`Agent`), tools (`AgentTool`), and session lifecycles (`InMemorySessionService`, `Runner`). |
+| **LiteLLM (`litellm`)** | Provider Gateway / Proxy | Translates Google ADK / OpenAI-format requests into Groq-compatible REST payloads. |
+| **Groq API** | Inference Hardware Provider | High-throughput LPU cloud executing model weights with low latency. |
+| **`openai/gpt-oss-120b`** | Language Model | Open-weights 120-billion parameter reasoning model providing strategic synthesis. |
+
+### Coordinator & Specialist Agents
+In `src/agent/`, I declared 5 specialized agents:
+1. **`coordinator_agent`:** Orchestrates domain tools, parses intent, and synthesizes the final executive commentary.
+2. **`location_agent`:** Inspects historical market density, median costs, and ordering rates for the target locality.
+3. **`performance_agent`:** Executes the pre-trained Random Forest model and extracts SHAP feature contributions.
+4. **`competition_agent`:** Executes nearby competitor discovery via the Google Places API.
+5. **`opportunity_agent`:** Combines the outputs of the Performance and Competition agents into a single opportunity score.
+
+### Guaranteed Execution Sequence & Automatic Fallback
+Relying purely on an LLM to call four independent tools in order introduces latency and ordering uncertainty. To solve this, I implemented `run_full_business_analysis` as a **composite orchestrator tool** registered directly on `coordinator_agent`. It enforces a strict, guaranteed sequential execution:
+$$\text{Location Context} \longrightarrow \text{ML Prediction \& SHAP} \longrightarrow \text{Competitor Search} \longrightarrow \text{Opportunity Scoring} \longrightarrow \text{Financial Simulation}$$
+
+If the external LLM provider encounters an invalid key (403), unavailable model (404), or timeout, [`src/agent/adk_runner.py`](src/agent/adk_runner.py) catches the exception and executes `run_full_business_analysis` directly in Python. This ensures that analytical calculations and UI cards render without interruption.
+
+---
+
+## 10. Groq + LiteLLM Integration
+
+I configured Groq as the primary LLM provider in `src/agent/llm_config.py` using LiteLLM:
+* **Configuration:** `PRIMARY_LLM_PROVIDER="groq"`, `PRIMARY_LLM_MODEL="openai/gpt-oss-120b"`, and `PRIMARY_LLM_BASE_URL="https://api.groq.com/openai/v1"`.
+* **Parameter Sanitization:** LiteLLM is configured with `litellm.drop_params = True`. Additionally, I monkey-patched `litellm.completion` and `litellm.acompletion` in `llm_config.py` to strip reasoning tokens (`reasoning_content`, `reasoning`) from message payloads, ensuring clean requests across OpenAI-compatible providers.
+* **Concise Response Prompting:** The coordinator prompt enforces a strict 100-to-120-word limit covering 4 specific points: Executive Summary, Key Insights, Key Risk, and Actionable Next Step. Raw numbers already visible in UI cards are excluded from the text commentary to prevent redundancy.
+
+---
+
+## 11. Random Forest Prediction & SHAP Explainability
+
+### Model Architecture & Specs
+* **Classifier:** Scikit-Learn `RandomForestClassifier`
+* **Tree Count:** 300 decision trees (`n_estimators=300`)
+* **Random State:** 42
+* **Storage Path:** `models/zomato_performance_model.pkl` (275.9 MB)
+* **Classes:** `['High', 'Low', 'Medium']`
+* **Features:** 219 encoded features produced by `models/zomato_preprocessor.pkl`
+
+### Feature Preprocessing Pipeline
+The feature preprocessor (`models/zomato_preprocessor.pkl`) is a Scikit-Learn `ColumnTransformer` with two sub-pipelines:
+* **Categorical (OneHotEncoder):** `cost_band`, `location`, `primary_cuisine`, `primary_rest_type` (`handle_unknown="ignore", sparse_output=False`).
+* **Numerical (StandardScaler):** `online_order`, `book_table`, `approx_costfor_two_people`, `log_cost`, `cuisine_count`, `historical_restaurant_count`, `location_median_cost`, `location_online_order_rate`, `location_book_table_rate`, `location_cuisine_diversity`, `location_business_type_diversity`.
+
+### SHAP Feature Attribution
+In [`src/ml/explainer.py`](src/ml/explainer.py), I used `shap.TreeExplainer` on the 300-tree forest to compute Shapley values for the predicted class. The explainer extracts raw feature attributions, maps one-hot encoded dummy variables back to readable business concepts via `get_feature_metadata()`, and sorts them to return the top 5 positive and negative contributing factors.
+
+---
+
+## 12. Dataset & Feature Engineering
+
+### Offline Training Lifecycle vs. Online Serving
+BizAdvisor strictly separates **offline model development** from **online production serving**:
+* **Offline Development (`notebooks/01` to `05`):** Raw data ingestion, currency cleaning, missing value imputation, feature engineering, and model training were conducted offline once.
+* **Online Serving (`server.py`):** The production backend **never** trains or retrains models during user requests or on application startup. It loads the pre-compiled `.pkl` artifacts into memory at startup and runs read-only inference.
+
+### Target Formulation
+In [`notebooks/04_zomato_feature_engineering.ipynb`](notebooks/04_zomato_feature_engineering.ipynb), I formulated the commercial performance target from 51,700+ historical records:
+1. $\text{rating\_percentile} = \text{rate.rank(pct=True)}$
+2. $\text{engagement\_percentile} = \log(1 + \text{votes}).\text{rank(pct=True)}$
+3. $\text{performance\_score} = 0.5 \times \text{rating\_percentile} + 0.5 \times \text{engagement\_percentile}$
+4. The composite score was binned into 3 balanced terciles using train set quantiles (33rd and 67th percentiles):
+   $$\text{performance\_class} \in \{\text{Low}, \text{Medium}, \text{High}\}$$
+
+---
+
+## 13. Location & Competitor Analysis
+
+### Location Context Store
+In [`src/analysis/location_context.py`](src/analysis/location_context.py), the system queries `data/processed/zomato_train_engineered.csv` to calculate historical locality baseline metrics:
+* Historical restaurant count and density.
+* Median cost for two in the area.
+* Historical online order and table booking penetration rates.
+* Local cuisine and restaurant type diversity indices.
+
+### Google Places Competitor Discovery
+In [`src/places/competition.py`](src/places/competition.py), the system queries the Google Places API (New Text Search v1):
+* **Endpoint:** `https://places.googleapis.com/v1/places:searchText`
+* **Location Bias:** Circular boundary with a 3.0 km radius around the resolved latitude/longitude coordinates.
+* **Direct Competitor Filtering:** Confirms `"restaurant" in place_types`.
+* **Analytical Thresholds:**
+  * **High-Rating Competitors:** Competitors with ratings $\ge 4.5\star$.
+  * **High-Review Landmark Competitors:** Competitors with review counts $\ge 2,000$ reviews.
+
+---
+
+## 14. Opportunity Scoring Methodology
+
+Implemented in [`src/analysis/opportunity.py`](src/analysis/opportunity.py), the opportunity score combines historical performance probability with current competitor saturation into a single 0–100 index.
+
+### Formulas
+
+1. **Performance Score (0–100):**
+   $$\text{Performance Score} = (P(\text{High}) \times 100) + (P(\text{Medium}) \times 60) + (P(\text{Low}) \times 20)$$
+2. **Competition Score (0–100):**
+   $$\text{Competition Score} = \left(\frac{\text{Avg Rating}}{5} \times 40\right) + \left(\min\left(\frac{\text{Avg Reviews}}{2000}, 1.0\right) \times 30\right) + \left(\frac{N_{\text{rating} \ge 4.5}}{N_{\text{total}}} \times 15\right) + \left(\frac{N_{\text{reviews} \ge 2000}}{N_{\text{total}}} \times 15\right)$$
+   *(If competitor count == 0, Competition Score = 0)*
+3. **Composite Opportunity Score:**
+   $$\text{Opportunity Score} = 0.60 \times \text{Performance Score} + 0.40 \times (100 - \text{Competition Score})$$
+
+### Classification Thresholds
+
+| Metric | Threshold Range | Signal Classification |
+|---|---|---|
+| **Historical Performance** | $< 40$ | "Weak historical performance" |
+| | $40 - 59.99$ | "Moderate historical performance" |
+| | $\ge 60$ | "Strong historical performance" |
+| **Competition Strength** | $\ge 70$ | "Strong competition" |
+| | $40 - 69.99$ | "Moderate competition" |
+| | $< 40$ | "Limited competition" |
+| **Final Opportunity Score** | $< 40$ | **Low Opportunity** |
+| | $40 - 69.99$ | **Moderate Opportunity** |
+| | $\ge 70$ | **High Opportunity** |
+
+---
+
+## 15. Financial Simulation & What-If Analysis
+
+### Deterministic Financial Engine
+Implemented in [`src/finance/simulator.py`](src/finance/simulator.py) using standard management accounting principles:
+
+$$\text{Average Spend Per Customer (AOV)} = \frac{\text{Cost for Two}}{2}$$
+
+$$\text{Monthly Projected Revenue} = \text{Daily Customers} \times \text{Operating Days} \times \text{AOV}$$
+
+$$\text{Variable Food Cost} = \text{Monthly Revenue} \times \left(\frac{\text{Food Cost \%}}{100}\right)$$
+
+$$\text{Fixed Operating Costs} = \text{Rent} + \text{Staff Cost} + \text{Utilities} + \text{Marketing} + \text{Other Expenses}$$
+
+$$\text{Total Operating Expenses} = \text{Fixed Costs} + \text{Variable Food Cost}$$
+
+$$\text{Estimated Operating Profit (EBITDA Proxy)} = \text{Monthly Revenue} - \text{Total Operating Expenses}$$
+
+$$\text{Contribution Margin Ratio (CMR)} = 1.0 - \left(\frac{\text{Food Cost \%}}{100}\right)$$
+
+$$\text{Break-Even Customers Per Day} = \frac{\text{Fixed Costs}}{\text{AOV} \times \text{CMR} \times \text{Operating Days}}$$
+
+$$\text{Daily Target (Whole Number)} = \lceil \text{Break-Even Customers Per Day} \rceil$$
+
+### Interactive Client Sliders
+In `FinancialCard.jsx`, the mathematical formulas are implemented in JavaScript, allowing users to modify footfall, rent, staff costs, and food cost percentages using interactive sliders with real-time recalculation.
+
+### What-If Scenario Modeling
+Users can click **"Simulate What-If Scenario"** in `OpportunityCard.jsx` to open `ScenarioModal.jsx`. Modifying parameters (such as adjusting cost for two from ₹800 to ₹1,400) triggers `POST /api/scenario`. The engine recalculates ML probabilities, opportunity scores, and unit economics side-by-side, displaying deltas (e.g. "+8.2 pts Opportunity Score, +12% High Performance Probability") in `ScenarioCard.jsx`.
+
+---
+
+## 16. MySQL Database Architecture
+
+BizAdvisor uses **MySQL 8.0+** (`bizadvisor_db`), managed via SQLAlchemy 2.0 with connection pooling (`pool_size=10, max_overflow=20, pool_recycle=3600`).
+
+```mermaid
+erDiagram
+    USERS ||--o{ CONVERSATIONS : "owns"
+    CONVERSATIONS ||--o{ MESSAGES : "contains"
+
+    USERS {
+        VARCHAR(64) id PK "UUID"
+        VARCHAR(50) username UK "Unique index"
+        VARCHAR(255) email UK "Unique index"
+        VARCHAR(255) hashed_password "Argon2id hash"
+        DATETIME created_at "UTC timestamp"
+        DATETIME updated_at "UTC timestamp"
+    }
+
+    CONVERSATIONS {
+        VARCHAR(64) id PK "UUID"
+        VARCHAR(64) user_id FK "References users.id (ON DELETE CASCADE)"
+        VARCHAR(255) title "Conversation Title"
+        DATETIME created_at "Creation timestamp"
+        DATETIME updated_at "Update timestamp"
+        DATETIME last_message_at "Sort index"
+        JSON parameters_json "Accumulated parameters"
+        JSON analysis_json "Latest structured analysis snapshot"
+    }
+
+    MESSAGES {
+        VARCHAR(64) id PK "UUID"
+        VARCHAR(64) conversation_id FK "References conversations.id (ON DELETE CASCADE)"
+        VARCHAR(20) role "'user' or 'assistant'"
+        TEXT content "Message body / markdown"
+        VARCHAR(50) message_type "'text', 'full', 'scenario', 'casual', 'needs_input'"
+        JSON metadata_json "Card payloads & scenario deltas"
+        DATETIME created_at "Indexed with conversation_id"
+    }
+```
+
+* **`users` Table:** Stores user credentials and registration metadata.
+* **`conversations` Table:** Stores business concept sessions, owning `user_id`, session titles, accumulated parameters, and latest analysis results.
+* **`messages` Table:** Stores individual conversational turns with timestamps and structured card metadata.
+* **Transaction Resilience:** In [`src/database.py`](src/database.py) (`save_chat_turn`), a `conversations` record is committed first before `messages` are added, preventing foreign key race conditions and resolving SQLAlchemy `StaleDataError` exceptions.
+
+---
+
+## 17. Authentication & Security
+
+1. **Argon2id Password Hashing:** Uses `argon2-cffi` (`time_cost=2, memory_cost=65536, parallelism=1, hash_len=32, salt_len=16`). Passwords are never stored in plaintext.
+2. **Signed JWT Bearer Tokens:** Signed with `HS256` using `PyJWT` with 60-minute expiration.
+3. **Constant-Time Verification:** Login verifies dummy hashes when accounts are not found, mitigating timing-based user enumeration attacks.
+4. **Startup Secret Validation:** In [`src/auth.py`](src/auth.py), `validate_jwt_secret()` verifies that `JWT_SECRET_KEY` is present, at least 32 characters long, and not a known development placeholder.
+5. **Route-Level Rate Limiting:** Enforced via `slowapi` (`10/min` on login/register, `20/min` on analyze/scenario, `30/min` on chat).
+6. **Strict User Data Isolation:** Every history query (`/api/history`, `/api/history/{id}`) filters strictly by `Conversation.user_id == current_user.id`. Accessing another user's session returns `403 Forbidden` or `404 Not Found`.
+7. **Security Headers:** Injects `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, and strict CORS policies.
+
+---
+
+## 18. API Documentation
+
+All protected endpoints require an `Authorization: Bearer <token>` header obtained from `/api/auth/login`.
+
+| Method | Endpoint | Auth | Rate Limit | Description |
+|---|---|:---:|:---:|---|
+| `POST` | `/api/auth/register` | No | 10 / min | Register a new user with username, email, and password. |
+| `POST` | `/api/auth/login` | No | 10 / min | Authenticate user and receive a signed JWT access token. |
+| `GET` | `/api/auth/me` | **Yes** | 120 / min | Retrieve profile information for the authenticated user. |
+| `GET` | `/api/health` | No | 120 / min | Health check returning service status, ML model, and timestamp. |
+| `POST` | `/api/analyze` | **Yes** | 20 / min | Run full analysis with explicit structured parameters. |
+| `POST` | `/api/chat` | **Yes** | 30 / min | Multi-turn conversational endpoint with parameter accumulation. |
+| `POST` | `/api/scenario` | **Yes** | 20 / min | Compare baseline vs modified What-If parameters. |
+| `POST` | `/api/financial/simulate` | No | 60 / min | Recalculate deterministic financial metrics on demand. |
+| `GET` | `/api/history` | **Yes** | 60 / min | List past analysis sessions owned by the authenticated user. |
+| `GET` | `/api/history/{session_id}` | **Yes** | 60 / min | Fetch full message history and analysis cards for a session. |
+| `DELETE`| `/api/history/{session_id}` | **Yes** | 30 / min | Delete a conversation and all its messages. |
+
+---
+
+## 19. Installation & Setup
+
+### Prerequisites
+* **Operating System:** Windows 10/11 (or Linux / macOS)
+* **Python:** Python 3.11, 3.12, or 3.13 (64-bit)
+* **Node.js:** Node.js v18.0+ or v20.0+ and `npm`
+* **Database:** MySQL Server 8.0+ running locally or remotely
+
+---
 
 ### Step 1: Clone the Repository
 ```powershell
-git clone https://github.com/your-username/Business_Analysis_Agent.git
+git clone https://github.com/Tanay-chaturvedi/Business_Analysis_Agent.git
 cd Business_Analysis_Agent
 ```
 
-### Step 2: Configure Python Virtual Environment
+### Step 2: Set Up Python Virtual Environment
 ```powershell
 # Create virtual environment
 python -m venv .venv
@@ -156,10 +600,8 @@ python -m venv .venv
 # Activate virtual environment in PowerShell
 .\.venv\Scripts\Activate.ps1
 
-# Upgrade pip
+# Upgrade pip and install backend dependencies
 python -m pip install --upgrade pip
-
-# Install backend dependencies
 pip install -r requirements.txt
 ```
 
@@ -170,163 +612,115 @@ npm install
 cd ..
 ```
 
----
-
-## 6. Environment Configuration
-
-1. Copy `.env.example` to `.env`:
-   ```powershell
-   Copy-Item .env.example .env
-   ```
-2. Generate a cryptographically secure 256-bit JWT secret key in PowerShell:
-   ```powershell
-   python -c "import secrets; print(secrets.token_hex(32))"
-   ```
-3. Open `.env` in your editor and configure the variables:
-
-| Variable | Description | Required? | Example / Default |
-| :--- | :--- | :--- | :--- |
-| `JWT_SECRET_KEY` | Secret key for signing authentication tokens (min 32 chars) | **Yes** | *Generated 64-char hex string* |
-| `JWT_ALGORITHM` | JWT signing algorithm | **Yes** | `HS256` |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token lifespan in minutes | **Yes** | `60` |
-| `MYSQL_HOST` | MySQL database host address | **Yes** | `localhost` |
-| `MYSQL_PORT` | MySQL database port | **Yes** | `3306` |
-| `MYSQL_USER` | MySQL database user | **Yes** | `root` |
-| `MYSQL_PASSWORD` | MySQL database password | **Yes** | *Your local MySQL password* |
-| `MYSQL_DATABASE` | MySQL database name | **Yes** | `bizadvisor_db` |
-| `CORS_ALLOWED_ORIGINS` | Permitted origins for frontend CORS | **Yes** | `http://localhost:5173,http://127.0.0.1:5173` |
-| `GOOGLE_MAPS_API_KEY` | Google Places API key for competitor lookup | Optional | *(Uses deterministic fallback if omitted)* |
-| `PRIMARY_LLM_PROVIDER` | Primary LLM provider | Optional | `groq` |
-| `PRIMARY_LLM_MODEL` | Primary LLM model name | Optional | `openai/gpt-oss-120b` |
-| `PRIMARY_LLM_API_KEY` | API key for primary LLM | Optional | *Your API Key* |
-| `PRIMARY_LLM_BASE_URL` | Base URL for LLM API | Optional | `https://api.groq.com/openai/v1` |
-
-> [!WARNING]
-> Never commit your `.env` file or hardcode credentials into source code. `.env` is ignored by `.gitignore`.
+### Step 4: Configure the MySQL Database
+Log in to your MySQL terminal and create the application database:
+```sql
+CREATE DATABASE IF NOT EXISTS bizadvisor_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+*(The FastAPI backend automatically creates the `users`, `conversations`, and `messages` tables on first startup).*
 
 ---
 
-## 7. Database Setup & Initialization
+## 20. Environment Variable Configuration
 
-1. Ensure MySQL server is running. Create the database:
-   ```sql
-   CREATE DATABASE IF NOT EXISTS bizadvisor_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
-2. **Automatic Schema Creation:** When `server.py` starts, SQLAlchemy automatically creates the required tables (`users`, `conversations`, `messages`) if they do not already exist.
-3. **Database Migration Script (for existing databases):**
-   If you have an existing database from an earlier version, run the migration script:
-   ```powershell
-   python scripts/migrate_add_users.py
-   ```
-   > [!NOTE]
-   > Always back up your database before running migrations. A backup utility is provided in `scripts/backup_database.py`.
+Create a `.env` file in the project root:
 
----
-
-## 8. Running the Application
-
-Open **two separate PowerShell terminal windows**:
-
-### Terminal 1: Backend API (FastAPI)
 ```powershell
-# From the project root
+# Generate a cryptographically secure 256-bit JWT secret in PowerShell:
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+Configure your `.env` file:
+
+```ini
+# ==============================================================================
+# BizAdvisor - Environment Configuration
+# ==============================================================================
+
+# --- External APIs ---
+GOOGLE_MAPS_API_KEY=your_google_places_api_key_here
+
+# --- Primary LLM Configuration (Groq via LiteLLM) ---
+PRIMARY_LLM_PROVIDER=groq
+PRIMARY_LLM_MODEL=openai/gpt-oss-120b
+PRIMARY_LLM_API_KEY=your_groq_api_key_here
+PRIMARY_LLM_BASE_URL=https://api.groq.com/openai/v1
+
+# --- Secondary Fallback LLM Configuration ---
+SECONDARY_LLM_PROVIDER=groq
+SECONDARY_LLM_MODEL=qwen/qwen3.8-27b
+SECONDARY_LLM_API_KEY=your_groq_api_key_here
+SECONDARY_LLM_BASE_URL=https://api.groq.com/openai/v1
+
+# --- MySQL Database Configuration ---
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=your_mysql_password
+MYSQL_DATABASE=bizadvisor_db
+
+# --- Security & JWT Authentication ---
+JWT_SECRET_KEY=your_generated_64_character_hex_secret_key_here
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000
+```
+
+---
+
+## 21. Running Frontend & Backend
+
+Running BizAdvisor requires **two separate terminal windows**:
+
+### Terminal 1: Backend API Server (FastAPI)
+```powershell
+# Navigate to project root
+cd Business_Analysis_Agent
+
+# Activate virtual environment
 .\.venv\Scripts\Activate.ps1
+
+# Launch FastAPI server with live reload
 uvicorn server:app --reload --host 127.0.0.1 --port 8000
 ```
-* Backend API runs at: `http://127.0.0.1:8000`
-* Interactive API Documentation (Swagger): `http://127.0.0.1:8000/docs`
+* **API Server:** `http://127.0.0.1:8000`
+* **Interactive API Docs (Swagger):** `http://127.0.0.1:8000/docs`
 
-### Terminal 2: Frontend Dashboard (React / Vite)
+### Terminal 2: Frontend Dashboard (React + Vite)
 ```powershell
-# From the project root
-cd frontend
+# Navigate to frontend folder
+cd Business_Analysis_Agent\frontend
+
+# Start Vite development server
 npm run dev
 ```
-* Frontend Dashboard runs at: `http://localhost:5173`
+* **Web Dashboard:** `http://localhost:5173`
 
 ---
 
-## 9. API Reference
+## 22. Testing Instructions
 
-All protected endpoints require an `Authorization: Bearer <token>` header obtained from `/api/auth/login`.
-
-| Method | Endpoint | Auth Required | Description |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | No | Register a new user with username, email, and password. |
-| `POST` | `/api/auth/login` | No | Authenticate user; returns JWT token. Rate-limited to 5 req/min. |
-| `GET` | `/api/auth/me` | **Yes** | Retrieve currently authenticated user's profile. |
-| `GET` | `/api/health` | No | Health check returning service and database status. |
-| `POST` | `/api/analyze` | Optional | Execute full business analysis for location, cuisine, cost, and parameters. |
-| `POST` | `/api/chat` | Optional | Multi-turn chat message endpoint with session context persistence. |
-| `POST` | `/api/scenario` | Optional | Run What-If scenario simulation comparing baseline against modified parameters. |
-| `POST` | `/api/financial/simulate` | Optional | Recalculate deterministic financial metrics on demand. |
-| `GET` | `/api/history` | **Yes** | List all past conversation sessions owned by the authenticated user. |
-| `GET` | `/api/history/{session_id}` | **Yes** | Fetch message history and structured analysis for a session. |
-| `DELETE`| `/api/history/{session_id}` | **Yes** | Delete conversation and cascading messages owned by the user. |
-
----
-
-## 10. Machine Learning & Model Artifacts
-
-* **Trained Classifier:** [`models/zomato_performance_model.pkl`](models/zomato_performance_model.pkl) is a trained Random Forest model predicting business viability tiers based on historical Zomato restaurant performance metrics in Bengaluru.
-* **Preprocessor:** [`models/zomato_preprocessor.pkl`](models/zomato_preprocessor.pkl) handles feature scaling, one-hot encoding, and categorical imputation.
-* **Runtime Location Store:** [`data/processed/zomato_train_engineered.csv`](data/processed/zomato_train_engineered.csv) is loaded at runtime by `src/analysis/location_context.py` to calculate historical location density, median price, online order adoption, and cuisine diversity.
-* **Explainability:** SHAP values are dynamically generated by `src/ml/explainer.py` to explain feature impact (e.g., impact of cost-for-two, table booking availability, cuisine popularity).
-* **Research Provenance:** The 6 Jupyter notebooks in `notebooks/` document data cleaning, feature engineering, exploratory data analysis, model training, and Places API prototyping.
-
----
-
-## 11. Financial Simulation Engine
-
-The financial engine ([`src/finance/simulator.py`](src/finance/simulator.py)) uses standard management accounting principles:
-
-### Core Formulas:
-1. **Average Spend per Customer (Estimate):**
-   $$\text{Average Spend} = \frac{\text{Cost for Two}}{2}$$
-   *(Modeled as an assumption-based estimate, not a guaranteed customer spend)*
-2. **Monthly Projected Revenue:**
-   $$\text{Monthly Revenue} = \text{Daily Customers} \times \text{Operating Days per Month} \times \text{Average Spend}$$
-3. **Variable Operating Costs:**
-   $$\text{Variable Costs} = \text{Monthly Revenue} \times \left(\frac{\text{Variable Cost Percentage}}{100}\right)$$
-4. **Fixed Operating Costs:**
-   $$\text{Fixed Operating Costs} = \text{Rent} + \text{Staff Costs} + \text{Utilities} + \text{Marketing} + \text{Other Fixed Costs}$$
-5. **Total Monthly Operating Expenses:**
-   $$\text{Total Operating Expenses} = \text{Variable Costs} + \text{Fixed Operating Costs}$$
-6. **Estimated Operating Profit (EBITDA Proxy):**
-   $$\text{Operating Profit} = \text{Monthly Revenue} - \text{Total Operating Expenses}$$
-7. **Contribution Margin & Break-Even Analysis:**
-   $$\text{Contribution Margin Ratio} = 1 - \left(\frac{\text{Variable Cost Percentage}}{100}\right)$$
-   $$\text{Break-Even Customers per Day} = \frac{\text{Fixed Operating Costs}}{\text{Average Spend} \times \text{Contribution Margin Ratio} \times \text{Operating Days}}$$
-   $$\text{Break-Even Target (Whole Number)} = \lceil \text{Break-Even Customers per Day} \rceil$$
-
-### Financial Disclaimers & Exclusions:
-* **Operating Profit vs. Net Profit:** Projections represent operating profit before corporate taxes, GST, interest on financing, depreciation on kitchen assets, and owner equity distributions.
-* **Third-Party Commissions:** Food delivery platform aggregator commissions (15%–25%) and payment gateway charges are not included in base assumptions and must be factored into Variable Costs by the user.
-
----
-
-## 12. Running Automated Tests
-
-The repository contains an automated regression and security test suite:
+The repository includes an automated test suite verifying financial formulas, security rules, and database stability:
 
 ```powershell
 # Activate virtual environment
 .\.venv\Scripts\Activate.ps1
 
-# Run all 33 regression, security, and financial tests
+# Run all 33 automated tests
 pytest -v tests/
 
-# Run focused financial accuracy tests only
+# Run financial accuracy tests only (11 tests)
 pytest -v tests/test_financial_accuracy.py
 
-# Run security and authentication tests only
+# Run security & authentication tests only (14 tests)
 pytest -v tests/test_security.py
 
-# Run database integration tests only
-pytest -v tests/test_mysql_integration.py
+# Run MySQL integration & regression tests only (8 tests)
+pytest -v tests/test_mysql_integration.py tests/test_mysql_regression.py
 ```
 
-### Frontend Production Build Verification:
+### Frontend Build Verification
+Verify that the production React build compiles without errors:
 ```powershell
 cd frontend
 npm run build
@@ -334,20 +728,25 @@ npm run build
 
 ---
 
-## 13. Limitations & Considerations
+## 23. Known Limitations
 
-1. **Geographic Coverage:** The pre-trained Random Forest model and location feature store are grounded in historical restaurant market data from Bengaluru, Karnataka. While the multi-agent system and Google Places competitor analysis function globally, historical performance inferences are strongest in urban Indian dining markets.
-2. **Assumption Sensitivity:** Financial projections rely on user-configurable inputs (daily footfall, average order size, rent, staff costs). Real-world outcomes depend heavily on operational execution, food quality, seasonality, and local regulations.
-3. **External API Dependence:** Live competitor discovery requires a valid Google Places API key; in its absence, the engine automatically falls back to deterministic historical benchmarks.
-4. **Single-Node Deployment:** In-memory rate limiting (`slowapi`) and local SQLite sessions are suitable for single-node instances. Production multi-instance deployments should configure a distributed Redis backend.
+1. **Geographic Focus:** The pre-trained Random Forest model and location feature store are based on historical restaurant data from Bengaluru, Karnataka. While Google Places competitor analysis and financial simulations function globally, historical demand predictions are most accurate for urban Indian dining markets.
+2. **Assumption Sensitivity:** Financial projections rely on user inputs (daily footfall, rent, staff costs). Real-world outcomes depend heavily on operational execution, food quality, seasonality, and local regulations.
+3. **No File Export Feature:** The application currently supports clipboard copying and text-to-speech reading. A dedicated PDF or CSV report download feature is not yet implemented.
+4. **Single-Node Rate Limiter:** The in-memory SlowAPI rate limiter is designed for single-node development. Production multi-node deployments require a distributed Redis backend.
 
 ---
 
-## 14. GitHub Security & Contribution Checklist
+## 24. Future Improvements
 
-Before pushing to a public or shared GitHub repository:
-- [x] Verify `.env` is listed in `.gitignore` and not tracked by Git (`git status`).
-- [x] Verify no hardcoded passwords, tokens, or API keys exist in source files.
-- [x] Verify database dump files or user export files in `data/` are excluded.
-- [x] Run `pytest -v tests/` to confirm all 33 automated tests pass.
-- [x] Run `npm run build` in `frontend/` to ensure the React bundle compiles without errors.
+* **PDF & CSV Export:** Add a server-side report generation engine to export structured feasibility reports.
+* **Multi-City ML Generalization:** Expand the training dataset to include additional metropolitan areas (Mumbai, Delhi-NCR, Hyderabad).
+* **Delivery Aggregator Commission Modeling:** Add specialized calculation toggles for third-party food delivery commissions (15%–25%) and payment gateway fees.
+* **Automated Periodic Retraining:** Implement a scheduled pipeline with MLflow tracking for model retraining.
+
+---
+
+## 25. Author Information
+
+**Tanay Chaturvedi**<br/>
+AI & Machine Learning Engineering Student

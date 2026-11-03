@@ -1,27 +1,110 @@
-# Python
-.venv/
+# ==============================================================================
+# BizAdvisor - Git Ignore Configuration
+# ==============================================================================
+
+# --- Python & Bytecode ---
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
+# --- Virtual Environments ---
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
 
-# Environment / Secrets
+# --- Testing & Quality Tools ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+
+# --- Environment Secrets & Credentials ---
 .env
-data/backups/
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
 
-# ADK Runtime
+# --- Google ADK & LLM Cache ---
 src/agent/.adk/
-*.db
+.adk/
 
+# --- Frontend Build Artifacts & Dependencies ---
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.oxlint_cache/
+.eslintcache
 
-# Large Raw Dataset
+# --- Machine Learning Artifacts & Checkpoints ---
+# The trained Random Forest classifier exceeds GitHub's 100MB file limit (~276MB)
+models/zomato_performance_model.pkl
+models/*.checkpoint
+models/*.tmp
+*.onnx
+
+# Explicitly preserve the lightweight feature preprocessor (6.5KB)
+!models/zomato_preprocessor.pkl
+
+# --- Large Datasets & Database Backups ---
+# Raw Zomato dataset exceeds GitHub's 100MB file limit (~547MB)
 data/raw/zomato.csv
 data/processed/
+data/backups/
+data/temp_gen/
+*.tmp
+*.temp
 
-# Large ML Model
-models/zomato_performance_model.pkl
+# Local SQLite databases & dumps
+*.db
+*.sqlite
+*.sqlite3
 
+# --- Logs & Runtime Temporary Files ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# OS / IDE
+# --- Operating System & IDE Files ---
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
+
 .vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
