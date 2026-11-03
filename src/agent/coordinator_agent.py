@@ -1,71 +1,63 @@
 from google.adk.agents import Agent
 from google.adk.tools import ToolContext
-from google.adk.tools.agent_tool import AgentTool    #AgentTool basically ek agent ko doosre agent ke liye callable tool bana deta hai.
+from google.adk.tools.agent_tool import AgentTool
+
 from src.agent.llm_config import PRIMARY_MODEL_NAME
-
-from src.agent.competition_agent import competition_agent
-from src.agent.location_agent import location_agent
-from src.agent.performance_agent import performance_agent
-from src.agent.opportunity_agent import opportunity_agent
-
-# Import the underlying tool functions directly so that the full-analysis
-# orchestrator can call them in a guaranteed order from Python — not via
-# LLM prompt instructions that only express a preference, not a hard constraint.
-from src.agent.location_agent import location_analysis_tool
-from src.agent.performance_agent import performance_analysis_tool
-from src.agent.competition_agent import competition_analysis_tool
-from src.agent.opportunity_agent import opportunity_analysis_tool
+from src.agent.location_agent import (
+    location_agent,
+    location_analysis_tool,
+)
+from src.agent.performance_agent import (
+    performance_agent,
+    performance_analysis_tool,
+)
+from src.agent.competition_agent import (
+    competition_agent,
+    competition_analysis_tool,
+)
+from src.agent.opportunity_agent import (
+    opportunity_agent,
+    opportunity_analysis_tool,
+)
 from src.finance.simulator import simulate_financials
 
 
 def validate_analysis_inputs(
-    location: str = None,
-    primary_cuisine: str = None,
-    primary_rest_type: str = None,
-    approx_costfor_two_people: float = None,
-    online_order: int = None,
-    book_table: int = None,
+    location=None,
+    primary_cuisine=None,
+    primary_rest_type=None,
+    approx_costfor_two_people=None,
+    online_order=None,
+    book_table=None,
 ) -> dict:
-    """
-    Validation layer verifying that all 6 required business-analysis inputs are available:
-    1. location
-    2. cuisine
-    3. restaurant_type
-    4. approx_costfor_two_people
-    5. has_online_order
-    6. has_table_booking
-    """
-    missing_inputs = []
 
-    if location is None or str(location).strip().lower() in ("", "none", "missing", "unknown", "null"):
-        missing_inputs.append("location")
+    inputs = {
+        "location": location,
+        "cuisine": primary_cuisine,
+        "restaurant_type": primary_rest_type,
+        "approx_costfor_two_people": approx_costfor_two_people,
+        "has_online_order": online_order,
+        "has_table_booking": book_table,
+    }
 
-    if primary_cuisine is None or str(primary_cuisine).strip().lower() in ("", "none", "missing", "unknown", "null"):
-        missing_inputs.append("cuisine")
+    missing = [
+        key
+        for key, value in inputs.items()
+        if value is None
+        or str(value).strip().lower() in ("", "none", "missing", "unknown", "null")
+    ]
 
-    if primary_rest_type is None or str(primary_rest_type).strip().lower() in ("", "none", "missing", "unknown", "null"):
-        missing_inputs.append("restaurant_type")
-
-    if approx_costfor_two_people is None or str(approx_costfor_two_people).strip().lower() in ("", "none", "missing", "unknown", "null"):
-        missing_inputs.append("approx_costfor_two_people")
-
-    if online_order is None or str(online_order).strip().lower() in ("", "none", "missing", "unknown", "null"):
-        missing_inputs.append("has_online_order")
-
-    if book_table is None or str(book_table).strip().lower() in ("", "none", "missing", "unknown", "null"):
-        missing_inputs.append("has_table_booking")
-
-    if missing_inputs:
+    if missing:
         return {
             "status": "needs_input",
             "is_valid": False,
-            "missing_inputs": missing_inputs
+            "missing_inputs": missing,
         }
 
     return {
         "status": "valid",
         "is_valid": True,
-        "missing_inputs": []
+        "missing_inputs": [],
     }
 
 
@@ -79,43 +71,22 @@ def run_full_business_analysis(
     primary_cuisine: str = None,
     cuisine_count: int = 2,
     primary_rest_type: str = None,
-    radius_km: float = 3.0,
+    radius_km: float = 3,
     max_results: int = 20,
-    customers_per_day: float = 100.0,
-    average_order_value: float = None,
+    initial_investment: float = 2000000.0,
+    monthly_fixed_costs: float = 150000.0,
     rent: float = 60000.0,
-    staff_cost: float = 50000.0,
-    food_cost_percent: float = 30.0,
-    utilities: float = 15000.0,
-    marketing: float = 10000.0,
-    other_expenses: float = 5000.0,
-    working_days: float = 30.0,
+    average_order_value: float = None,
+    gross_margin_pct: float = 0.65,
+    cost_of_goods_sold_pct: float = 0.35,
+    marketing_budget: float = 30000.0,
+    target_payback_months: int = 18,
+    scenario_growth_rate: float = 0.05,
+    tax_rate: float = 0.05,
     tool_context: ToolContext = None,
-    progress_callback = None
+    progress_callback=None,
 ) -> dict:
-    """
-    Orchestrate a full business analysis in guaranteed order:
 
-        Step 1 – Location context (historical data for the target location)
-        Step 2 – Performance prediction (ML model + SHAP)
-        Step 3 – Competition analysis (Google Places)
-        Step 4 – Opportunity analysis (requires ACTUAL Performance and
-                  Competition outputs — runs only after they exist)
-
-    Opportunity cannot execute before Performance and Competition because
-    this function passes their actual return values as arguments.
-
-    This tool preserves independent agent usage:
-    - Use location_agent for location-only requests.
-    - Use performance_agent for performance-only requests.
-    - Use competition_agent for competition-only requests.
-    - Use opportunity_agent when Performance and Competition data are
-      already available.
-    - Use this tool ONLY when a complete end-to-end analysis is required.
-    """
-    # ------------------------------------------------------------------ #
-    # Step 0: Backend Required Input Validation                           #
-    # ------------------------------------------------------------------ #
     validation = validate_analysis_inputs(
         location=location,
         primary_cuisine=primary_cuisine,
@@ -128,122 +99,123 @@ def run_full_business_analysis(
         return validation
 
     if progress_callback:
-        progress_callback("coordinator", "started", "Orchestrating specialist analysis")
+        progress_callback(
+            "coordinator", "started", "Orchestrating specialist analysis"
+        )
 
-    # ------------------------------------------------------------------ #
-    # Step 1: Location context                                             #
-    # ------------------------------------------------------------------ #
+    # 1. Location Analysis
     if progress_callback:
         progress_callback("location", "started", "Retrieving location context...")
-
     location_result = location_analysis_tool(
-        location=location,
-        tool_context=tool_context
+        location=location, tool_context=tool_context
     )
-
     if progress_callback:
-        progress_callback("location", "completed", "Location context retrieved")
+        progress_callback(
+            "location", "completed", "Location context retrieved"
+        )
 
-    # ------------------------------------------------------------------ #
-    # Step 2: Performance prediction                                        #
-    # Location context is read from tool_context.state by the tool if     #
-    # historical_restaurant_count / location_median_cost are not passed.   #
-    # ------------------------------------------------------------------ #
-    perf_kwargs = dict(
-        online_order=online_order,
-        book_table=book_table,
-        approx_costfor_two_people=approx_costfor_two_people,
-        cost_band=cost_band,
-        location=location,
-        primary_cuisine=primary_cuisine,
-        cuisine_count=cuisine_count,
-        primary_rest_type=primary_rest_type,
-        tool_context=tool_context,
-    )
+    # 2. Performance Prediction
+    if progress_callback:
+        progress_callback(
+            "performance", "started", "Running performance prediction..."
+        )
+    perf_kwargs = {
+        "online_order": online_order,
+        "book_table": book_table,
+        "approx_costfor_two_people": approx_costfor_two_people,
+        "cost_band": cost_band,
+        "location": location,
+        "primary_cuisine": primary_cuisine,
+        "cuisine_count": cuisine_count,
+        "primary_rest_type": primary_rest_type,
+        "tool_context": tool_context,
+    }
     if progress_callback:
         perf_kwargs["progress_callback"] = progress_callback
-
     performance_result = performance_analysis_tool(**perf_kwargs)
 
-    # ------------------------------------------------------------------ #
-    # Step 3: Competition analysis                                          #
-    # business_type is always "restaurant" for food businesses.            #
-    # ------------------------------------------------------------------ #
+    # 3. Competition Analysis
     if progress_callback:
-        progress_callback("competition", "started", "Retrieving nearby competitors...")
-
+        progress_callback(
+            "competition", "started", "Retrieving nearby competitors..."
+        )
     competition_result = competition_analysis_tool(
         location=location,
         search_query=search_query,
         business_type="restaurant",
         radius_km=radius_km,
         max_results=max_results,
-        tool_context=tool_context
+        tool_context=tool_context,
     )
-
     if progress_callback:
         comp_count = competition_result.get("competitor_count", 0)
-        progress_callback("competition", "completed", f"{comp_count} competitors found")
+        progress_callback(
+            "competition", "completed", f"{comp_count} competitors found"
+        )
 
-    # ------------------------------------------------------------------ #
-    # Step 4: Opportunity analysis                                          #
-    # Opportunity receives the ACTUAL outputs of Steps 2 and 3.            #
-    # It cannot reach this line before Steps 2 and 3 have returned.        #
-    # ------------------------------------------------------------------ #
+    # 4. Opportunity Assessment
     if progress_callback:
-        progress_callback("opportunity", "started", "Combining performance and competition signals...")
-
-    prob_dict = performance_result["probabilities"]
-    competition_summary = competition_result["competition_summary"]
-
+        progress_callback(
+            "opportunity",
+            "started",
+            "Combining performance and competition signals...",
+        )
     opportunity_result = opportunity_analysis_tool(
-        probabilities=prob_dict,
-        model_classes=list(prob_dict.keys()),
-        competition_summary=competition_summary,
-        tool_context=tool_context
+        probabilities=performance_result["probabilities"],
+        model_classes=performance_result["model_classes"],
+        competition_summary=competition_result["competition_summary"],
+        tool_context=tool_context,
+    )
+    if progress_callback:
+        score = opportunity_result.get("opportunity_score", {}).get("score", 0.0)
+        signal = opportunity_result.get("opportunity_score", {}).get(
+            "signal", "Unknown"
+        )
+        progress_callback(
+            "opportunity", "completed", f"Opportunity score: {score:.1f} ({signal})"
+        )
+
+    # 5. Financial Simulation
+    if progress_callback:
+        progress_callback(
+            "financial", "started", "Running 3-year cash flow simulation..."
+        )
+
+    aov = (
+        average_order_value
+        if average_order_value is not None
+        else (float(approx_costfor_two_people) / 2.0)
     )
 
-    if progress_callback:
-        progress_callback("opportunity", "completed", "Opportunity assessment completed")
-
-    # ------------------------------------------------------------------ #
-    # Step 5: Financial analysis                                            #
-    # ------------------------------------------------------------------ #
-    if progress_callback:
-        progress_callback("financial", "started", "Calculating revenue, expenses, and break-even...")
-
-    aov = average_order_value if average_order_value is not None else (float(approx_costfor_two_people) / 2.0)
-
-    financial_result = simulate_financials(
-        customers_per_day=customers_per_day,
-        average_order_value=aov,
-        rent=rent,
-        staff_cost=staff_cost,
-        food_cost_percent=food_cost_percent,
-        utilities=utilities,
-        marketing=marketing,
-        other_expenses=other_expenses,
-        working_days=working_days,
-    )
-    financial_result["customers_per_day"] = round(customers_per_day, 2)
-    financial_result["average_order_value"] = round(aov, 2)
-    financial_result["assumptions"] = {
-        "customers_per_day": round(customers_per_day, 2),
-        "average_order_value": round(aov, 2),
-        "working_days": round(working_days, 2),
-        "rent": round(rent, 2),
-        "staff_cost": round(staff_cost, 2),
-        "food_cost_percent": round(food_cost_percent, 2),
-        "utilities": round(utilities, 2),
-        "marketing": round(marketing, 2),
-        "other_expenses": round(other_expenses, 2),
+    assumptions = {
+        "initial_investment": round(float(initial_investment), 2),
+        "monthly_fixed_costs": round(float(monthly_fixed_costs), 2),
+        "rent": round(float(rent), 2),
+        "average_order_value": round(float(aov), 2),
+        "gross_margin_pct": round(float(gross_margin_pct), 2),
+        "cost_of_goods_sold_pct": round(float(cost_of_goods_sold_pct), 2),
+        "marketing_budget": round(float(marketing_budget), 2),
+        "target_payback_months": int(target_payback_months),
+        "scenario_growth_rate": round(float(scenario_growth_rate), 2),
+        "tax_rate": round(float(tax_rate), 2),
     }
 
-    if progress_callback:
-        progress_callback("financial", "completed", "Financial analysis completed")
+    financial_result = simulate_financials(
+        performance_result=performance_result,
+        opportunity_result=opportunity_result,
+        assumptions=assumptions,
+    )
+
+    financial_result["average_order_value"] = assumptions["average_order_value"]
+    financial_result["assumptions"] = assumptions
 
     if progress_callback:
-        progress_callback("coordinator", "completed", "Orchestration completed")
+        progress_callback(
+            "financial", "completed", "Financial simulation completed"
+        )
+        progress_callback(
+            "coordinator", "completed", "Full business analysis complete"
+        )
 
     return {
         "location_result": location_result,
@@ -255,55 +227,28 @@ def run_full_business_analysis(
     }
 
 
+COORDINATOR_SYSTEM_INSTRUCTION = """
+You are the Master Coordinator Agent for BizAdvisor, an AI-powered business assessment system for restaurants in Bengaluru.
+
+Your role:
+- Orchestrate specialist analysis using run_full_business_analysis.
+- Synthesize findings into a clear, structured advisory response.
+
+Output requirements:
+- Maximum 120 words total.
+- Exactly 4 sections:
+  1. Executive Summary (2 sentences max)
+  2. Key Insights (2 bullet points)
+  3. Key Risk (1 sentence)
+  4. Next Step (1 concrete action)
+- Be specific, actionable, and data-driven. Reference concrete numbers.
+"""
+
 coordinator_agent = Agent(
     name="coordinator_agent",
     model=PRIMARY_MODEL_NAME,
-
-    description=(
-        "Coordinator agent responsible for understanding the user's "
-        "business analysis request and delegating work to specialized agents."
-    ),
-
-    instruction="""
-You are the Coordinator Agent for BizAdvisor, an AI business analysis system.
-
-Your primary job is to understand the user's request, delegate work using specialized tools, and present a concise summary.
-
-==================================================
-TOOL DELEGATION RULES
-==================================================
-
-1. FULL BUSINESS ANALYSIS:
-   When the user requests a complete business analysis, call:
-       run_full_business_analysis
-   Pass numeric parameters as numbers (e.g., approx_costfor_two_people=1200.0, online_order=1, book_table=1, radius_km=3.0).
-
-2. FOCUSED REQUESTS:
-   - For location-only: call location_agent
-   - For performance-only: call performance_agent
-   - For competition-only: call competition_agent with business_type="restaurant"
-   - For opportunity-only: call opportunity_agent (requires Performance & Competition outputs)
-
-==================================================
-FINAL SYNTHESIS RESPONSE FORMAT
-==================================================
-
-CRITICAL LENGTH RULE: Your final synthesis response MUST BE EXTREMELY CONCISE (STRICT MAXIMUM OF 100 TO 120 WORDS TOTAL). DO NOT GENERATE LONG ESSAYS OR EXTENSIVE MULTI-PARAGRAPH RECOMMENDATION LISTS.
-
-Format the response strictly using these 4 brief points:
-
-1. **Executive Summary**: State the Opportunity Score & level (e.g., 62.66 - Moderate) and the ML Model Prediction (e.g., High performance).
-2. **Key Insights**: State 2-3 short bullet insights derived directly from the returned tool data (e.g., strong location demand, 62% operating profit margin).
-3. **Key Risk**: State 1 primary risk (e.g., high competition strength).
-4. **Next Step**: State 1 clear, actionable next step for the business owner.
-
-RULES:
-- Do NOT repeat raw tables, detailed competitor lists, or numbers already displayed in UI cards.
-- Use ONLY the actual returned tool outputs. Do not invent or recalculate numbers.
-- Do NOT claim SHAP or historical features are causal guarantees.
-- Do NOT exceed 120 words under any circumstances.
-""",
-
+    description="Master coordinator that orchestrates restaurant business analysis.",
+    instruction=COORDINATOR_SYSTEM_INSTRUCTION.strip(),
     tools=[
         AgentTool(agent=location_agent),
         AgentTool(agent=performance_agent),
