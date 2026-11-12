@@ -15,7 +15,7 @@ When Gemini returns a 403/404 (API unavailable):
     - The same structured result dict is returned.
     - The fallback is logged clearly so it is never hidden.
 
-IMPORTANT: All domain calculations (ML, SHAP, Google Places, opportunity)
+IMPORTANT: All domain calculations (ML, Google Places, opportunity)
 remain in the existing src/ modules. The ADK runner only orchestrates the
 agent loop — it does NOT replace or alter any calculation logic.
 """
