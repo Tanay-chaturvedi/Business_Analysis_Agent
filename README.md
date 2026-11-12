@@ -1,6 +1,12 @@
 # BizAdvisor: AI-Powered Restaurant Feasibility Platform
 
-BizAdvisor is a business intelligence and advisory platform designed to evaluate the commercial feasibility of restaurant ventures in Bengaluru, India. It combines machine learning performance prediction, live competitor discovery via Google Places, deterministic monthly financial modeling, and structured AI-generated business insights.
+An AI-powered business intelligence and decision-support platform designed to evaluate the commercial feasibility of restaurant ventures in Bengaluru, India.
+
+**Project:** BizAdvisor  
+**Developer:** Tanay Chaturvedi  
+**Domain:** Artificial Intelligence and Machine Learning  
+
+> BizAdvisor combines machine learning performance prediction, live geospatial competitor discovery via Google Places, deterministic monthly financial modeling, and structured AI-generated business insights into an integrated advisory workflow.
 
 ---
 
@@ -28,21 +34,21 @@ flowchart TD
     User([User / Browser]) <--> ReactApp["React 19 Frontend (Vite + Tailwind CSS v4)"]
     ReactApp <-->|REST + Bearer JWT| FastAPI["FastAPI Backend (server.py)"]
     
-    subgraph Security ["Security & Middleware"]
+    subgraph Security ["Security and Middleware"]
         FastAPI --- RateLimiter["SlowAPI Rate Limiter"]
         FastAPI --- AuthModule["src/auth.py (Argon2id + PyJWT HS256)"]
         FastAPI --- SecHeaders["Security Headers Middleware"]
     end
 
     subgraph Database ["Persistence Layer"]
-        FastAPI <-->|SQLAlchemy + PyMySQL| MySQL[("MySQL Database (bizadvisor_db)")]
+        FastAPI <-->|SQLAlchemy + PyMySQL| MySQL[("MySQL Database: bizadvisor_db")]
         MySQL --- UsersTable["users"]
         MySQL --- ConvsTable["conversations"]
         MySQL --- MsgsTable["messages"]
     end
 
-    subgraph Orchestration ["Agent & Analytics Layer"]
-        FastAPI <-->|src/agent/coordinator_agent.py| Coord["Coordinator Agent (Google ADK)"]
+    subgraph Orchestration ["Agent and Analytics Layer"]
+        FastAPI <-->|ADK Coordinator runner| Coord["Coordinator Agent (Google ADK)"]
         Coord --> LocAgent["Location Agent (location_context.py)"]
         Coord --> PerfAgent["Performance Agent (predictor.py)"]
         Coord --> CompAgent["Competition Agent (competition.py)"]
@@ -51,11 +57,11 @@ flowchart TD
         Coord --> InsightsGen["Insights Generator (insights_generator.py)"]
     end
 
-    subgraph ExternalServices ["External Intelligence & Models"]
+    subgraph ExternalServices ["External Intelligence and Models"]
         LocAgent --- ZomatoData[("Engineered Training Data (CSV)")]
         PerfAgent --- RFModel[("Random Forest Model (.pkl)")]
-        CompAgent <-->|places:searchText (3 km)| GooglePlaces["Google Places API"]
-        InsightsGen <-->|LiteLLM Gateway| GroqLLM["Groq API (Primary / Secondary)"]
+        CompAgent <-->|SearchText request and response, 3 km radius| GooglePlaces["Google Places API"]
+        InsightsGen <-->|LiteLLM Gateway| GroqLLM["Groq API (Primary and Secondary)"]
     end
 ```
 
@@ -126,13 +132,13 @@ BizAdvisor uses a single-call structured insight generation pipeline with a 3-ti
 ```mermaid
 flowchart TD
     Req([Generate Insights]) --> Tier1["Tier 1: Primary LLM\ngroq/openai/gpt-oss-120b"]
-    Tier1 -->|Success| Out1["Return Structured LLM Insights\n(source: 'llm_primary')"]
+    Tier1 -->|Success| Out1["Return Structured LLM Insights (source: llm_primary)"]
     
-    Tier1 -->|Rate Limit / Timeout / Error| Tier2["Tier 2: Secondary LLM\ngroq/qwen/qwen3.8-27b"]
-    Tier2 -->|Success| Out2["Return Structured LLM Insights\n(source: 'llm_secondary')"]
+    Tier1 -->|Rate limit, timeout, or error| Tier2["Tier 2: Secondary LLM\ngroq/qwen/qwen3.8-27b"]
+    Tier2 -->|Success| Out2["Return Structured LLM Insights (source: llm_secondary)"]
     
-    Tier2 -->|Failure / Outage| Tier3["Tier 3: Deterministic Python Fallback\n_get_fallback_insights()"]
-    Tier3 --> Out3["Return Rule-Based Data Insights\n(source: 'deterministic_fallback')"]
+    Tier2 -->|Failure or outage| Tier3["Tier 3: Deterministic Python Fallback\n_get_fallback_insights()"]
+    Tier3 --> Out3["Return Rule-Based Data Insights (source: deterministic_fallback)"]
 ```
 
 - **Single Structured Request:** All six analysis sections (`location_insights`, `performance_insights`, `competition_insights`, `opportunity_insights`, `financial_insights`, `business_recommendations`) are generated in a single prompt.
@@ -193,9 +199,9 @@ erDiagram
     MESSAGES {
         string id PK "String(64), UUID4"
         string conversation_id FK "String(64), References conversations.id"
-        string role "String(20), 'user' or 'assistant'"
+        string role "String(20), user or assistant"
         text content "Text, Message body"
-        string message_type "String(50), 'text', 'analysis', 'scenario', etc."
+        string message_type "String(50), message type"
         json metadata_json "JSON, Stores analysis, parameters, scenario diffs"
         datetime created_at "UTC DateTime, Indexed"
     }
@@ -410,3 +416,11 @@ pytest tests/ -v
 - **`tests/test_security.py` (14 tests):** Verifies Argon2id password hashing, credential validation, JWT token expiration, route protection, cross-user data isolation, rate limiting, and startup secret key validation.
 - **`tests/test_mysql_integration.py` (4 tests):** Verifies MySQL schema generation, conversation CRUD, cascading deletes, and analysis payload persistence.
 - **`tests/test_mysql_regression.py` (4 tests):** Verifies multi-turn session creation, conversation updates, and recovery from stale session data.
+
+---
+
+## Developer & Project Information
+
+- **Developer:** Tanay Chaturvedi
+- **Domain:** Artificial Intelligence and Machine Learning
+- **Project:** BizAdvisor — Restaurant Feasibility & Business Advisory Platform
