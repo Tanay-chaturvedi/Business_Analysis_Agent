@@ -1,5 +1,4 @@
 from google.adk.agents import Agent
-from google.adk.tools import ToolContext
 
 from src.agent.llm_config import PRIMARY_MODEL_NAME
 from src.analysis.opportunity import analyze_business_opportunity
@@ -19,32 +18,12 @@ _REQUIRED_COMPETITION_KEYS = {
 def opportunity_analysis_tool(
     probabilities: list | dict = None,
     model_classes: list = None,
-    competition_summary: dict = None,
-    tool_context: ToolContext = None
+    competition_summary: dict = None
 ) -> dict:
     """
     Calculate business opportunity using ML predictions
     and competition analysis.
     """
-
-    # Retrieve missing inputs from shared state
-    if tool_context and hasattr(tool_context, "state"):
-        state = tool_context.state
-
-        if probabilities is None or (
-            isinstance(probabilities, list) and not probabilities
-        ):
-            perf = state.get("performance_result", {})
-            if isinstance(perf, dict) and "probabilities" in perf:
-                prob_dict = perf["probabilities"]
-                if isinstance(prob_dict, dict):
-                    model_classes = list(prob_dict.keys())
-                    probabilities = list(prob_dict.values())
-
-        if competition_summary is None or (
-            isinstance(competition_summary, dict) and not competition_summary
-        ):
-            competition_summary = state.get("competition_result")
 
     # Validate and normalize ML probabilities
     if isinstance(probabilities, dict):
@@ -92,10 +71,6 @@ def opportunity_analysis_tool(
         model_classes=model_classes,
         competition_summary=competition_summary
     )
-
-    # Save result in shared state
-    if tool_context and hasattr(tool_context, "state"):
-        tool_context.state["opportunity_result"] = result
 
     return result
 

@@ -1,5 +1,4 @@
 from google.adk.agents import Agent
-from google.adk.tools import ToolContext
 from src.agent.llm_config import PRIMARY_MODEL_NAME
 
 from src.places.competition import (
@@ -10,20 +9,11 @@ from src.places.competition import (
 )
 
 
-def competition_analysis_tool(
-    location: str,
-    search_query: str,
-    business_type: str,
-    radius_km: float = 3,
-    max_results: int = 20,
-    tool_context: ToolContext = None
+def competition_analysis_tool(location: str,search_query: str,business_type: str,radius_km: float = 3,max_results: int = 20
 ) -> dict:
 
     # Step 1: Resolve human-readable location into latitude and longitude
-    latitude, longitude = resolve_location_coordinates(
-        location
-    )
-
+    latitude, longitude = resolve_location_coordinates(location)
     # Step 2: Search Google Places
     candidates = search_competitors_by_text(
         latitude=latitude,
@@ -34,15 +24,10 @@ def competition_analysis_tool(
     )
 
     # Step 3: Keep relevant competitors
-    relevant_competitors = filter_relevant_competitors(
-        candidates,
-        business_type=business_type
-    )
+    relevant_competitors = filter_relevant_competitors(candidates,business_type=business_type)
 
     # Step 4: Generate competition summary
-    summary = summarize_competition(
-        relevant_competitors
-    )
+    summary = summarize_competition(relevant_competitors)
 
     # Step 5: Convert DataFrame to JSON-friendly records
     if relevant_competitors.empty:
@@ -66,13 +51,10 @@ def competition_analysis_tool(
         "location": location,
         "latitude": latitude,
         "longitude": longitude,
+        "competitor_count": len(competitors),
         "competition_summary": summary,
         "competitors": competitors
     }
-
-    if tool_context and hasattr(tool_context, "state"):
-        tool_context.state["competition_result"] = summary
-        tool_context.state["full_competition_result"] = result
 
     return result
 

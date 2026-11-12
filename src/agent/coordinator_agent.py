@@ -1,5 +1,4 @@
 from google.adk.agents import Agent
-from google.adk.tools import ToolContext
 from google.adk.tools.agent_tool import AgentTool
 
 from src.agent.llm_config import PRIMARY_MODEL_NAME
@@ -19,6 +18,7 @@ from src.agent.opportunity_agent import (
     opportunity_agent,
     opportunity_analysis_tool,
 )
+from src.agent.insights_generator import generate_business_insights
 from src.finance.simulator import simulate_financials
 
 
@@ -30,8 +30,8 @@ def validate_analysis_inputs(
     online_order=None,
     book_table=None,
 ) -> dict:
-
-    inputs = {
+    """Validate that all 6 required business parameters are provided."""
+    required = {
         "location": location,
         "cuisine": primary_cuisine,
         "restaurant_type": primary_rest_type,
@@ -42,22 +42,16 @@ def validate_analysis_inputs(
 
     missing = [
         key
-        for key, value in inputs.items()
+        for key, value in required.items()
         if value is None
         or str(value).strip().lower() in ("", "none", "missing", "unknown", "null")
     ]
 
-    if missing:
-        return {
-            "status": "needs_input",
-            "is_valid": False,
-            "missing_inputs": missing,
-        }
-
+    is_valid = len(missing) == 0
     return {
-        "status": "valid",
-        "is_valid": True,
-        "missing_inputs": [],
+        "status": "valid" if is_valid else "needs_input",
+        "is_valid": is_valid,
+        "missing_inputs": missing,
     }
 
 
@@ -73,20 +67,20 @@ def run_full_business_analysis(
     primary_rest_type: str = None,
     radius_km: float = 3,
     max_results: int = 20,
-    initial_investment: float = 2000000.0,
-    monthly_fixed_costs: float = 150000.0,
-    rent: float = 60000.0,
+    customers_per_day: float = 100.0,
     average_order_value: float = None,
-    gross_margin_pct: float = 0.65,
-    cost_of_goods_sold_pct: float = 0.35,
-    marketing_budget: float = 30000.0,
-    target_payback_months: int = 18,
-    scenario_growth_rate: float = 0.05,
-    tax_rate: float = 0.05,
-    tool_context: ToolContext = None,
+    rent: float = 60000.0,
+    staff_cost: float = 50000.0,
+    food_cost_percent: float = 30.0,
+    utilities: float = 15000.0,
+    marketing: float = 10000.0,
+    other_expenses: float = 5000.0,
+    working_days: float = 30.0,
     progress_callback=None,
 ) -> dict:
-
+    """
+    Execute complete end-to-end business analysis workflow across all specialist agents.
+    """
     validation = validate_analysis_inputs(
         location=location,
         primary_cuisine=primary_cuisine,
@@ -98,27 +92,19 @@ def run_full_business_analysis(
     if not validation["is_valid"]:
         return validation
 
-    if progress_callback:
-        progress_callback(
-            "coordinator", "started", "Orchestrating specialist analysis"
-        )
+    def notify(stage: str, status: str, message: str):
+        if progress_callback:
+            progress_callback(stage, status, message)
+
+    notify("coordinator", "started", "Orchestrating specialist analysis")
 
     # 1. Location Analysis
-    if progress_callback:
-        progress_callback("location", "started", "Retrieving location context...")
-    location_result = location_analysis_tool(
-        location=location, tool_context=tool_context
-    )
-    if progress_callback:
-        progress_callback(
-            "location", "completed", "Location context retrieved"
-        )
+    notify("location", "started", "Retrieving location context...")
+    location_result = location_analysis_tool(location=location)
+    notify("location", "completed", "Location context retrieved")
 
     # 2. Performance Prediction
-    if progress_callback:
-        progress_callback(
-            "performance", "started", "Running performance prediction..."
-        )
+    notify("performance", "started", "Running performance prediction...")
     perf_kwargs = {
         "online_order": online_order,
         "book_table": book_table,
@@ -128,96 +114,87 @@ def run_full_business_analysis(
         "primary_cuisine": primary_cuisine,
         "cuisine_count": cuisine_count,
         "primary_rest_type": primary_rest_type,
-        "tool_context": tool_context,
     }
+    if location_result and location_result.get("found", False):
+        perf_kwargs.update({
+            "historical_restaurant_count": location_result.get("historical_restaurant_count", 0),
+            "location_median_cost": location_result.get("location_median_cost", 0.0),
+            "location_online_order_rate": location_result.get("location_online_order_rate", 0.0),
+            "location_book_table_rate": location_result.get("location_book_table_rate", 0.0),
+            "location_cuisine_diversity": location_result.get("location_cuisine_diversity", 0),
+            "location_business_type_diversity": location_result.get("location_business_type_diversity", 0),
+        })
     if progress_callback:
         perf_kwargs["progress_callback"] = progress_callback
     performance_result = performance_analysis_tool(**perf_kwargs)
 
     # 3. Competition Analysis
-    if progress_callback:
-        progress_callback(
-            "competition", "started", "Retrieving nearby competitors..."
-        )
+    notify("competition", "started", "Retrieving nearby competitors...")
+    effective_query = (
+        search_query
+        if isinstance(search_query, str) and search_query.strip()
+        else f"{primary_cuisine or ''} restaurant in {location}".strip()
+    )
     competition_result = competition_analysis_tool(
         location=location,
-        search_query=search_query,
+        search_query=effective_query,
         business_type="restaurant",
         radius_km=radius_km,
         max_results=max_results,
-        tool_context=tool_context,
     )
-    if progress_callback:
-        comp_count = competition_result.get("competitor_count", 0)
-        progress_callback(
-            "competition", "completed", f"{comp_count} competitors found"
-        )
+    comp_count = competition_result.get("competitor_count", 0)
+    notify("competition", "completed", f"{comp_count} competitors found")
 
     # 4. Opportunity Assessment
-    if progress_callback:
-        progress_callback(
-            "opportunity",
-            "started",
-            "Combining performance and competition signals...",
-        )
+    notify("opportunity", "started", "Combining performance and competition signals...")
     opportunity_result = opportunity_analysis_tool(
         probabilities=performance_result["probabilities"],
-        model_classes=performance_result["model_classes"],
+        model_classes=list(performance_result["probabilities"].keys()),
         competition_summary=competition_result["competition_summary"],
-        tool_context=tool_context,
     )
-    if progress_callback:
-        score = opportunity_result.get("opportunity_score", {}).get("score", 0.0)
-        signal = opportunity_result.get("opportunity_score", {}).get(
-            "signal", "Unknown"
-        )
-        progress_callback(
-            "opportunity", "completed", f"Opportunity score: {score:.1f} ({signal})"
-        )
+    score = opportunity_result.get("opportunity_score", {}).get("score", 0.0)
+    signal = opportunity_result.get("opportunity_score", {}).get("signal", "Unknown")
+    notify("opportunity", "completed", f"Opportunity score: {score:.1f} ({signal})")
 
     # 5. Financial Simulation
-    if progress_callback:
-        progress_callback(
-            "financial", "started", "Running 3-year cash flow simulation..."
-        )
-
+    notify("financial", "started", "Running 3-year cash flow simulation...")
     aov = (
         average_order_value
         if average_order_value is not None
         else (float(approx_costfor_two_people) / 2.0)
     )
 
-    assumptions = {
-        "initial_investment": round(float(initial_investment), 2),
-        "monthly_fixed_costs": round(float(monthly_fixed_costs), 2),
-        "rent": round(float(rent), 2),
-        "average_order_value": round(float(aov), 2),
-        "gross_margin_pct": round(float(gross_margin_pct), 2),
-        "cost_of_goods_sold_pct": round(float(cost_of_goods_sold_pct), 2),
-        "marketing_budget": round(float(marketing_budget), 2),
-        "target_payback_months": int(target_payback_months),
-        "scenario_growth_rate": round(float(scenario_growth_rate), 2),
-        "tax_rate": round(float(tax_rate), 2),
-    }
-
     financial_result = simulate_financials(
-        performance_result=performance_result,
-        opportunity_result=opportunity_result,
-        assumptions=assumptions,
+        customers_per_day=float(customers_per_day),
+        average_order_value=float(aov),
+        rent=float(rent),
+        staff_cost=float(staff_cost),
+        food_cost_percent=float(food_cost_percent),
+        utilities=float(utilities),
+        marketing=float(marketing),
+        other_expenses=float(other_expenses),
+        working_days=float(working_days),
     )
 
-    financial_result["average_order_value"] = assumptions["average_order_value"]
-    financial_result["assumptions"] = assumptions
+    financial_result["customers_per_day"] = round(float(customers_per_day), 2)
+    financial_result["average_order_value"] = round(float(aov), 2)
+    financial_result["assumptions"] = {
+        "customers_per_day": round(float(customers_per_day), 2),
+        "average_order_value": round(float(aov), 2),
+        "working_days": round(float(working_days), 2),
+        "rent": round(float(rent), 2),
+        "staff_cost": round(float(staff_cost), 2),
+        "food_cost_percent": round(float(food_cost_percent), 2),
+        "utilities": round(float(utilities), 2),
+        "marketing": round(float(marketing), 2),
+        "other_expenses": round(float(other_expenses), 2),
+    }
+    notify("financial", "completed", "Financial simulation completed")
 
-    if progress_callback:
-        progress_callback(
-            "financial", "completed", "Financial simulation completed"
-        )
-        progress_callback(
-            "coordinator", "completed", "Full business analysis complete"
-        )
+    # 6. AI Insights Generation
+    notify("insights", "started", "Generating AI insights across all sections...")
 
-    return {
+    analysis_payload = {
         "location_result": location_result,
         "performance_result": performance_result,
         "competition_result": competition_result,
@@ -225,6 +202,26 @@ def run_full_business_analysis(
         "financial_result": financial_result,
         "financial": financial_result,
     }
+
+    concept_context = {
+        "location": location,
+        "primary_cuisine": primary_cuisine,
+        "primary_rest_type": primary_rest_type,
+        "approx_cost_for_two": float(approx_costfor_two_people),
+        "online_order": online_order,
+        "book_table": book_table,
+    }
+
+    ai_insights = generate_business_insights(
+        context=concept_context,
+        analysis=analysis_payload,
+    )
+    analysis_payload["ai_insights"] = ai_insights
+
+    notify("insights", "completed", "AI insights generated")
+    notify("coordinator", "completed", "Full business analysis complete")
+
+    return analysis_payload
 
 
 COORDINATOR_SYSTEM_INSTRUCTION = """

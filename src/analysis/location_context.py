@@ -8,6 +8,38 @@ DATA_PATH = os.path.join(BASE_DIR,"data","processed","zomato_train_engineered.cs
 
 # LOCATION NORMALIZATION
 
+LOCATION_ALIASES = {
+    "hsr layout": "hsr",
+    "btm layout": "btm",
+    "indira nagar": "indiranagar",
+    "electronic city phase 1": "electronic city",
+    "electronic city phase 2": "electronic city",
+    "electronic city phase i": "electronic city",
+    "electronic city phase ii": "electronic city",
+    "jp nagar phase 1": "jp nagar",
+    "jp nagar phase 2": "jp nagar",
+    "jp nagar phase 3": "jp nagar",
+    "jp nagar phase 4": "jp nagar",
+    "jp nagar phase 5": "jp nagar",
+    "jp nagar phase 6": "jp nagar",
+    "jp nagar phase 7": "jp nagar",
+    "jp nagar phase 8": "jp nagar",
+    "jp nagar 1st phase": "jp nagar",
+    "jp nagar 2nd phase": "jp nagar",
+    "jp nagar 3rd phase": "jp nagar",
+    "jp nagar 4th phase": "jp nagar",
+    "jp nagar 5th phase": "jp nagar",
+    "jp nagar 6th phase": "jp nagar",
+    "jp nagar 7th phase": "jp nagar",
+    "jp nagar 8th phase": "jp nagar",
+    "bannerghatta": "bannerghatta road",
+    "sarjapur": "sarjapur road",
+    "bellanduru": "bellandur",
+    "malleswaram": "malleshwaram",
+    "marathalli": "marathahalli",
+}
+
+
 def normalize_location(location: str) -> str:      # It is called inside get_location_context()
     """
     Normalize user-provided location names.
@@ -23,22 +55,28 @@ def normalize_location(location: str) -> str:      # It is called inside get_loc
 
         whitefield
     """
-    location = (str(location).strip().lower())
+    loc_str = str(location).strip().lower()
     
     suffixes = [
         ", bengaluru",
         ", bangalore",
         ", karnataka",
+        ", india",
         " bengaluru",
         " bangalore",
-        " karnataka"
+        " karnataka",
+        " india"
     ]
 
     for suffix in suffixes:
+        if loc_str.endswith(suffix):
+            loc_str = loc_str[:-len(suffix)].strip()
 
-        if location.endswith(suffix):
-            location = location[:-len(suffix)].strip()
-    return location     # returns location as string
+    # Check known aliases (e.g. 'hsr layout' -> 'hsr')
+    if loc_str in LOCATION_ALIASES:
+        loc_str = LOCATION_ALIASES[loc_str]
+
+    return loc_str     # returns location as string
 
 
 
@@ -64,7 +102,9 @@ def get_location_context(location: str) -> dict:
     requested_location = normalize_location(location)
 
     # Find location, filter the required rows
-    location_data = df[df["_location_normalized"] == requested_location]
+    location_data = df[
+        df["_location_normalized"] == requested_location
+        ]
 
     # Location not found
     if location_data.empty:
