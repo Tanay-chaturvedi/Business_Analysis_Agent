@@ -38,34 +38,35 @@ export default function ScenarioModal({ isOpen, onClose, currentParams, onSubmit
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100 transition-colors">
-        {/* Header */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/60">
+    <div className="fixed inset-0 z-50 bg-[#111111]/65 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="editorial-panel rounded-xl w-full max-w-lg shadow-2xl overflow-hidden text-[#111111] dark:text-[#F3EEE3]">
+        <div className="p-4 border-b border-[#E6DED0] dark:border-[#2F2B25] flex items-center justify-between bg-[#F8F5EE] dark:bg-[#161513]">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400">
-              <SlidersHorizontal className="w-5 h-5" />
+            <div className="p-2 rounded-lg bg-[#EAE3D5] dark:bg-[#22201D] border border-[#D4C9B6] dark:border-[#3A352E]">
+              <SlidersHorizontal className="w-4 h-4 text-[#D9541E]" />
             </div>
             <div>
-              <h2 className="font-bold text-slate-900 dark:text-white text-base">Create What-If Scenario</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Modify business parameters & compare outcomes</p>
+              <h2 className="font-heading font-bold text-[#111111] dark:text-white text-sm sm:text-base">
+                Create What-If Scenario
+              </h2>
+              <p className="text-xs text-[#6B665E] dark:text-[#A69E92]">
+                Modify concept parameters and compare against baseline
+              </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[#6B665E] hover:text-[#111111] dark:hover:text-white hover:bg-[#EAE3D5] dark:hover:bg-[#22201D] transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
-          {/* Target Location */}
           <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" /> Target Location
+            <label className="block font-semibold text-[#111111] dark:text-[#E6DED0] mb-1.5 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-[#D9541E]" /> Target Location
             </label>
             <input
               type="text"
@@ -73,15 +74,14 @@ export default function ScenarioModal({ isOpen, onClose, currentParams, onSubmit
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g. Koramangala, Bengaluru"
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+              className="w-full bg-[#F8F5EE] dark:bg-[#22201D] border border-[#C9BFAE] dark:border-[#3A352E] rounded-lg px-3 py-2 text-[#111111] dark:text-[#F3EEE3] focus:outline-none focus:border-[#D9541E] transition-colors"
             />
           </div>
 
-          {/* Grid: Cuisine & Cost */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
-                <Utensils className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" /> Primary Cuisine
+              <label className="block font-semibold text-[#111111] dark:text-[#E6DED0] mb-1.5 flex items-center gap-1.5">
+                <Utensils className="w-3.5 h-3.5 text-[#D9541E]" /> Primary Cuisine
               </label>
               <input
                 type="text"
@@ -89,13 +89,13 @@ export default function ScenarioModal({ isOpen, onClose, currentParams, onSubmit
                 value={cuisine}
                 onChange={(e) => setCuisine(e.target.value)}
                 placeholder="e.g. Japanese, Cafe"
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                className="w-full bg-[#F8F5EE] dark:bg-[#22201D] border border-[#C9BFAE] dark:border-[#3A352E] rounded-lg px-3 py-2 text-[#111111] dark:text-[#F3EEE3] focus:outline-none focus:border-[#D9541E] transition-colors"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
-                <IndianRupee className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Cost for Two (₹)
+              <label className="block font-semibold text-[#111111] dark:text-[#E6DED0] mb-1.5 flex items-center gap-1.5">
+                <IndianRupee className="w-3.5 h-3.5 text-[#254C3B] dark:text-[#4C9A77]" /> Cost for Two (₹)
               </label>
               <input
                 type="number"
@@ -105,71 +105,68 @@ export default function ScenarioModal({ isOpen, onClose, currentParams, onSubmit
                 value={cost}
                 onChange={(e) => setCost(e.target.value)}
                 placeholder="1800"
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+                className="w-full bg-[#F8F5EE] dark:bg-[#22201D] border border-[#C9BFAE] dark:border-[#3A352E] rounded-lg px-3 py-2 text-[#111111] dark:text-[#F3EEE3] focus:outline-none focus:border-[#D9541E] transition-colors tabular-nums"
               />
             </div>
           </div>
 
-          {/* Restaurant Type */}
           <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1">
-              <Store className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Restaurant Concept Type
+            <label className="block font-semibold text-[#111111] dark:text-[#E6DED0] mb-1.5 flex items-center gap-1.5">
+              <Store className="w-3.5 h-3.5 text-[#6B665E]" /> Restaurant Concept Type
             </label>
             <select
               value={restType}
               onChange={(e) => setRestType(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500 transition-colors"
+              className="w-full bg-[#F8F5EE] dark:bg-[#22201D] border border-[#C9BFAE] dark:border-[#3A352E] rounded-lg px-3 py-2 text-[#111111] dark:text-[#F3EEE3] focus:outline-none focus:border-[#D9541E] transition-colors"
             >
               <option value="Casual Dining">Casual Dining</option>
               <option value="Fine Dining">Fine Dining</option>
-              <option value="Quick Bytes">Quick Bytes / Fast Food</option>
+              <option value="Quick Bites">Quick Bites / Fast Food</option>
               <option value="Cafe">Cafe / Coffee Shop</option>
               <option value="Bakery">Bakery & Confectionery</option>
               <option value="Dessert Parlor">Dessert Parlor</option>
             </select>
           </div>
 
-          {/* Toggles: Online Ordering & Table Booking */}
           <div className="grid grid-cols-2 gap-3 pt-1">
-            <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer">
-              <span className="text-slate-700 dark:text-slate-300 font-medium">Online Ordering</span>
+            <label className="flex items-center justify-between p-3 rounded-lg bg-[#F8F5EE] dark:bg-[#22201D] border border-[#DDD4C3] dark:border-[#3A352E] cursor-pointer">
+              <span className="text-[#111111] dark:text-[#E6DED0] font-medium">Online Ordering</span>
               <input
                 type="checkbox"
                 checked={onlineOrder}
                 onChange={(e) => setOnlineOrder(e.target.checked)}
-                className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700"
+                className="w-4 h-4 accent-[#D9541E]"
               />
             </label>
 
-            <label className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer">
-              <span className="text-slate-700 dark:text-slate-300 font-medium">Table Booking</span>
+            <label className="flex items-center justify-between p-3 rounded-lg bg-[#F8F5EE] dark:bg-[#22201D] border border-[#DDD4C3] dark:border-[#3A352E] cursor-pointer">
+              <span className="text-[#111111] dark:text-[#E6DED0] font-medium">Table Booking</span>
               <input
                 type="checkbox"
                 checked={bookTable}
                 onChange={(e) => setBookTable(e.target.checked)}
-                className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700"
+                className="w-4 h-4 accent-[#D9541E]"
               />
             </label>
           </div>
 
-          {/* Submit Button */}
-          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+          <div className="pt-3 border-t border-[#E6DED0] dark:border-[#2F2B25] flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold transition-colors cursor-pointer"
+              className="py-2 px-4 rounded-lg bg-[#E6DED0] dark:bg-[#22201D] hover:bg-[#DDD4C3] dark:hover:bg-[#2D2924] text-[#111111] dark:text-[#E6DED0] font-semibold transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="py-2.5 px-5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-semibold shadow-lg shadow-purple-600/20 transition-all flex items-center gap-2 cursor-pointer"
+              className="py-2 px-4 rounded-lg editorial-btn-primary font-semibold flex items-center gap-2 cursor-pointer"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Calculating Backend Scenario...</span>
+                  <span>Calculating Scenario...</span>
                 </>
               ) : (
                 <>

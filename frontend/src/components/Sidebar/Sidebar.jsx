@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlusCircle, MessageSquare, Search, Trash2, User, X, Building2, PanelLeftClose, PanelLeft, Plus } from 'lucide-react';
+import { MessageSquare, Search, Trash2, User, X, Compass, PanelLeftClose, PanelLeft, Plus, LogOut } from 'lucide-react';
 
 export default function Sidebar({
   historyItems,
@@ -27,56 +27,58 @@ export default function Sidebar({
       {/* Mobile Backdrop Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 lg:hidden"
+          className="fixed inset-0 bg-[#111111]/60 backdrop-blur-xs z-40 lg:hidden"
           onClick={onClose}
         />
       )}
 
-      {/* Sidebar Container */}
+      {/* Ink Black Sidebar Container */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 z-50 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800/80 text-slate-700 dark:text-slate-300 flex flex-col transition-all duration-300 ease-in-out lg:static lg:translate-x-0 ${isOpen ? 'translate-x-0 w-72' : '-translate-x-full'
-          } ${isCollapsed ? 'lg:w-16' : 'lg:w-64'}`}
+        className={`fixed top-0 left-0 bottom-0 z-50 bg-[#111111] dark:bg-[#0B0B0A] border-r border-white/10 text-[#E6DED0] flex flex-col transition-all duration-200 ease-in-out lg:static lg:translate-x-0 ${
+          isOpen ? 'translate-x-0 w-72' : '-translate-x-full'
+        } ${isCollapsed ? 'lg:w-16' : 'lg:w-64'}`}
       >
         {/* Top Header & Brand */}
-        <div className={`p-3.5 border-b border-slate-200 dark:border-slate-800/80 flex items-center ${isCollapsed ? 'lg:justify-center' : 'justify-between'}`}>
+        <div
+          className={`p-4 border-b border-white/10 flex items-center ${
+            isCollapsed ? 'lg:justify-center' : 'justify-between'
+          }`}
+        >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-md shadow-indigo-500/20 text-white font-bold text-base shrink-0">
-              <Building2 className="w-5 h-5" />
+            <div className="h-8 w-8 rounded-lg bg-[#D9541E] flex items-center justify-center text-white font-bold shrink-0">
+              <Compass className="w-4 h-4" />
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
-                <h1 className="font-bold text-slate-900 dark:text-white text-base tracking-tight leading-none flex items-center gap-1.5">
-                  <span className="truncate">BizAdvisor</span>
-                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <h1 className="font-heading font-bold text-white text-[15px] tracking-tight leading-none truncate">
+                  BizAdvisor
                 </h1>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
-                  AI Business Advisor
+                <p className="text-[10px] text-[#A69E92] font-medium tracking-wide uppercase truncate mt-1">
+                  Business Intelligence
                 </p>
               </div>
             )}
           </div>
 
-          {/* Desktop Collapse Toggle Button */}
           {!isCollapsed && (
             <button
               onClick={onToggleCollapse}
               title="Collapse Sidebar"
-              className="hidden lg:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="hidden lg:flex p-1.5 rounded-md text-[#A69E92] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             >
               <PanelLeftClose className="w-4 h-4" />
             </button>
           )}
 
-          {/* Mobile Close Button */}
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden cursor-pointer"
+            className="p-1.5 rounded-md text-[#A69E92] hover:text-white hover:bg-white/10 lg:hidden cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Action Button: New Analysis */}
+        {/* Primary Action: New Analysis */}
         <div className="p-3 pb-2">
           <button
             onClick={() => {
@@ -84,25 +86,26 @@ export default function Sidebar({
               if (isOpen) onClose();
             }}
             title={isCollapsed ? 'New Analysis' : undefined}
-            className={`w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center justify-center gap-2 group cursor-pointer text-xs ${isCollapsed ? 'lg:px-0 lg:w-10 lg:h-10 lg:mx-auto' : 'px-3'
-              }`}
+            className={`w-full py-2.5 editorial-btn-primary font-semibold rounded-lg flex items-center justify-center gap-2 group cursor-pointer text-xs ${
+              isCollapsed ? 'lg:px-0 lg:w-10 lg:h-10 lg:mx-auto' : 'px-3'
+            }`}
           >
-            <Plus className="w-4 h-4 shrink-0 transition-transform group-hover:rotate-90" />
+            <Plus className="w-4 h-4 shrink-0" />
             {!isCollapsed && <span className="truncate">New Analysis</span>}
           </button>
         </div>
 
-        {/* Search Bar */}
+        {/* Search History */}
         {!isCollapsed ? (
           <div className="px-3 py-1.5">
             <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#8C857B]" />
               <input
                 type="text"
-                placeholder="Search history..."
+                placeholder="Search analyses..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-100 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="w-full bg-[#1C1B19] border border-white/12 rounded-lg pl-8 pr-3 py-1.5 text-xs text-[#F3EEE3] placeholder-[#8C857B] focus:outline-none focus:border-[#D9541E] transition-colors"
               />
             </div>
           </div>
@@ -111,25 +114,25 @@ export default function Sidebar({
             <button
               onClick={onToggleCollapse}
               title="Search / Expand Sidebar"
-              className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
+              className="p-2 text-[#A69E92] hover:text-white hover:bg-white/10 rounded-lg cursor-pointer"
             >
               <Search className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* History List */}
-        <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-1">
+        {/* Recent Analyses List */}
+        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
           {!isCollapsed && (
-            <div className="px-2.5 py-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="px-2.5 py-1.5 text-[10px] font-semibold text-[#8C857B] uppercase tracking-[0.08em]">
               Recent Analyses
             </div>
           )}
 
           {filteredHistory.length === 0 ? (
             !isCollapsed && (
-              <div className="px-3 py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                {searchTerm ? 'No matching analyses.' : 'No recent analyses.'}
+              <div className="px-3 py-6 text-center text-xs text-[#8C857B]">
+                {searchTerm ? 'No matching analyses.' : 'No recent analyses yet.'}
               </div>
             )
           ) : (
@@ -143,26 +146,31 @@ export default function Sidebar({
                     if (isOpen) onClose();
                   }}
                   title={isCollapsed ? `${item.title} (${item.opportunity_score || 'N/A'})` : undefined}
-                  className={`group relative flex items-center ${isCollapsed ? 'lg:justify-center lg:p-2' : 'justify-between p-2'
-                    } rounded-xl cursor-pointer text-xs transition-all ${isActive
-                      ? 'bg-indigo-50 dark:bg-slate-800/90 text-indigo-950 dark:text-white font-medium border border-indigo-200 dark:border-slate-700 shadow-xs'
-                      : 'hover:bg-slate-100 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                    }`}
+                  className={`group relative flex items-center ${
+                    isCollapsed ? 'lg:justify-center lg:p-2' : 'justify-between px-2.5 py-2'
+                  } rounded-lg cursor-pointer text-xs transition-colors ${
+                    isActive
+                      ? 'bg-white/[0.09] text-white border-l-2 border-[#D9541E] font-medium'
+                      : 'text-[#C8C1B6] hover:bg-white/[0.05] hover:text-white'
+                  }`}
                 >
                   <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5 min-w-0 pr-5'}`}>
-                    <MessageSquare className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`} />
+                    <MessageSquare
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        isActive ? 'text-[#D9541E]' : 'text-[#8C857B]'
+                      }`}
+                    />
                     {!isCollapsed && (
                       <div className="truncate">
-                        <div className="truncate font-medium text-slate-800 dark:text-slate-200 text-xs">{item.title}</div>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
-                          ₹{item.approx_cost ? Number(item.approx_cost).toLocaleString('en-IN') : 'N/A'} · Score:{' '}
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{item.opportunity_score || 'N/A'}</span>
+                        <div className="truncate font-medium text-[#F3EEE3] text-xs">{item.title}</div>
+                        <div className="text-[10px] text-[#8C857B] truncate mt-0.5 tabular-nums">
+                          {item.approx_cost ? `₹${Number(item.approx_cost).toLocaleString('en-IN')}` : 'N/A'} · Score:{' '}
+                          <span className="text-[#E6DED0] font-semibold">{item.opportunity_score ?? 'N/A'}</span>
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Delete Item Button (Expanded View) */}
                   {!isCollapsed && (
                     <button
                       onClick={(e) => {
@@ -170,7 +178,7 @@ export default function Sidebar({
                         onDeleteSession(item.id);
                       }}
                       title="Delete entry"
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:text-rose-500 dark:hover:text-rose-400 text-slate-400 transition-opacity cursor-pointer"
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:text-[#E06C5B] text-[#8C857B] transition-opacity cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -181,27 +189,37 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* User Profile Footer */}
-        <div className={`p-2.5 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950/40 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+        {/* User Profile & Logout Footer */}
+        <div
+          className={`p-3 border-t border-white/10 bg-[#0C0C0B] flex ${
+            isCollapsed ? 'flex-col items-center gap-2' : 'items-center justify-between gap-2'
+          }`}
+        >
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5 min-w-0'}`}>
             <div
               title={currentUser ? currentUser.username : 'Sign In'}
               onClick={currentUser ? undefined : onOpenAuth}
-              className={`w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0 ${!currentUser ? 'cursor-pointer hover:border-indigo-500' : ''}`}
+              className={`w-8 h-8 rounded-lg bg-[#22201D] border border-white/12 flex items-center justify-center text-xs font-bold text-[#F3EEE3] shrink-0 ${
+                !currentUser ? 'cursor-pointer hover:border-[#D9541E]' : ''
+              }`}
             >
-              <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              {currentUser?.username ? (
+                <span className="uppercase text-[#D9541E]">{currentUser.username.slice(0, 2)}</span>
+              ) : (
+                <User className="w-4 h-4 text-[#D9541E]" />
+              )}
             </div>
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
                 {currentUser ? (
                   <>
-                    <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{currentUser.username}</div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{currentUser.email || 'Authenticated User'}</div>
+                    <div className="text-xs font-semibold text-white truncate">{currentUser.username}</div>
+                    <div className="text-[10px] text-[#8C857B] truncate">{currentUser.email || 'Authenticated'}</div>
                   </>
                 ) : (
                   <button
                     onClick={onOpenAuth}
-                    className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer text-left"
+                    className="text-xs font-semibold text-[#D9541E] hover:underline cursor-pointer text-left"
                   >
                     Sign In / Register
                   </button>
@@ -214,9 +232,10 @@ export default function Sidebar({
             <button
               onClick={onLogout}
               title="Sign Out"
-              className="text-[11px] font-medium text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 px-2 py-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="flex items-center gap-1 text-[11px] font-medium text-[#A69E92] hover:text-white px-2 py-1.5 rounded-md hover:bg-white/10 transition-colors cursor-pointer shrink-0"
             >
-              Logout
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Logout</span>
             </button>
           )}
 
@@ -224,7 +243,7 @@ export default function Sidebar({
             <button
               onClick={onToggleCollapse}
               title="Expand Sidebar"
-              className="hidden lg:flex mt-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              className="hidden lg:flex p-1.5 rounded-md text-[#A69E92] hover:text-white hover:bg-white/10 cursor-pointer"
             >
               <PanelLeft className="w-4 h-4" />
             </button>

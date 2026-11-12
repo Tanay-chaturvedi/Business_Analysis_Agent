@@ -4,83 +4,81 @@ import { Sparkles, MapPin, Store, Scale, Calculator, ArrowRight } from 'lucide-r
 export default function EmptyState({ onSelectPrompt }) {
   const suggestedPrompts = [
     {
-      title: 'Japanese Restaurant',
-      location: 'Koramangala, Bengaluru',
-      prompt: 'Analyze a Japanese restaurant in Koramangala',
+      title: 'Japanese Casual Dining',
+      prompt: 'Analyze a Japanese Casual Dining restaurant in Koramangala with cost for two ₹1800, online ordering yes and table booking yes',
       icon: MapPin,
-      badge: 'Location & ML Analysis',
+      badge: 'Full Assessment',
     },
     {
-      title: 'Cafe Competitors',
-      location: 'HSR Layout, Bengaluru',
-      prompt: 'Find competitors for a cafe in HSR Layout',
+      title: 'Neighborhood Cafe Feasibility',
+      prompt: 'Analyze a Cafe in HSR Layout with cost for two ₹600, online ordering yes and table booking no',
       icon: Store,
-      badge: 'Competitor Discovery',
+      badge: 'Location & Competition',
     },
     {
-      title: 'Location Comparison',
-      location: 'Koramangala vs Indiranagar',
-      prompt: 'Compare Koramangala vs Indiranagar',
+      title: 'Quick Service Concept',
+      prompt: 'Analyze a North Indian Quick Service outlet in Indiranagar, ₹450 for two, online ordering yes, table booking no',
       icon: Scale,
-      badge: 'Multi-Location What-If',
+      badge: 'Unit Economics & ML',
     },
     {
-      title: 'Price Adjustment',
-      location: 'Koramangala, Bengaluru',
-      prompt: 'What if I reduce my price to ₹1200?',
+      title: 'Fine Dining Evaluation',
+      prompt: 'Analyze an Italian Fine Dining restaurant in Whitefield for ₹1600, online ordering no, table booking yes',
       icon: Calculator,
-      badge: 'Price Sensitivity',
+      badge: 'Margin & Break-Even',
     },
   ];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12 text-center my-auto flex flex-col items-center justify-center">
-      {/* Icon Badge */}
-      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-semibold mb-6">
-        <Sparkles className="w-4 h-4" />
-        <span>BizAdvisor AI Orchestrator</span>
+    <div className="max-w-3xl mx-auto px-2 sm:px-4 py-10 sm:py-16 text-center flex flex-col items-center justify-center">
+      {/* Eyebrow Tag */}
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#E6DED0] dark:bg-[#22201D] border border-[#D4C9B6] dark:border-[#36312A] text-[#111111] dark:text-[#F3EEE3] text-[11px] font-semibold uppercase tracking-[0.06em] mb-6">
+        <Sparkles className="w-3.5 h-3.5 text-[#D9541E]" />
+        <span>Bengaluru Restaurant Advisory</span>
       </div>
 
-      {/* Main Heading */}
-      <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight max-w-2xl mb-3">
-        Turn your business idea into a <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400">data-backed decision.</span>
+      {/* Editorial Display Heading */}
+      <h1 className="font-heading text-3xl sm:text-4xl font-extrabold text-[#111111] dark:text-[#F3EEE3] tracking-tight leading-[1.15] max-w-2xl mb-4">
+        Turn your restaurant concept into a{' '}
+        <span className="text-[#D9541E]">data-backed decision.</span>
       </h1>
 
       {/* Subheading */}
-      <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base max-w-xl mb-10 leading-relaxed">
-        Analyze locations, competitors, historical performance and business opportunities with AI.
+      <p className="text-[#6B665E] dark:text-[#A69E92] text-sm sm:text-base max-w-xl mb-10 leading-relaxed">
+        Combine historical Zomato market benchmarks, Random Forest classification, live Google Places competitor intelligence, and financial simulation in one brief.
       </p>
 
-      {/* Suggested Prompt Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full text-left">
+      {/* Suggested Prompt Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full text-left">
         {suggestedPrompts.map((item, index) => {
           const Icon = item.icon;
           return (
-            <div
+            <button
+              type="button"
               key={index}
               onClick={() => onSelectPrompt(item.prompt)}
-              className="glass-card glass-card-hover p-4 rounded-2xl cursor-pointer group flex flex-col justify-between"
+              className="editorial-card-interactive p-4.5 rounded-xl cursor-pointer group flex flex-col justify-between text-left"
             >
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-[10px] font-semibold text-[#6B665E] dark:text-[#A69E92] uppercase tracking-[0.06em] bg-[#F3EEE3] dark:bg-[#26231F] px-2 py-0.5 rounded border border-[#E6DED0] dark:border-[#36312A]">
                     {item.badge}
                   </span>
-                  <Icon className="w-4 h-4 text-slate-400 dark:text-slate-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
+                  <Icon className="w-4 h-4 text-[#6B665E] dark:text-[#A69E92] group-hover:text-[#D9541E] transition-colors" />
                 </div>
-                <h3 className="font-semibold text-slate-900 dark:text-slate-200 text-sm group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">
+                <h3 className="font-heading font-bold text-[#111111] dark:text-[#F3EEE3] text-sm group-hover:text-[#D9541E] transition-colors">
                   {item.title}
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                <p className="text-xs text-[#6B665E] dark:text-[#A69E92] mt-1.5 line-clamp-2 leading-relaxed">
                   "{item.prompt}"
                 </p>
               </div>
 
-              <div className="mt-4 flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 group-hover:text-indigo-700 dark:group-hover:text-indigo-300">
-                <span>Analyze this scenario</span>
+              <div className="mt-4 pt-2.5 border-t border-[#EAE3D5] dark:border-[#2C2823] flex items-center justify-between text-xs font-semibold text-[#D9541E]">
+                <span>Run assessment</span>
                 <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

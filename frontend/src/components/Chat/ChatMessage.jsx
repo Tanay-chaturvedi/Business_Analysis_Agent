@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Bot, Sparkles, MapPin, Store, Copy, Check } from 'lucide-react';
+import { User, Compass, Copy, Check } from 'lucide-react';
 import LocationCard from '../Analysis/LocationCard';
 import PerformanceCard from '../Analysis/PerformanceCard';
 import CompetitionCard from '../Analysis/CompetitionCard';
@@ -8,7 +8,7 @@ import FinancialCard from '../Analysis/FinancialCard';
 import ScenarioCard from '../Analysis/ScenarioCard';
 import WhatThisMeansCard from '../Analysis/WhatThisMeansCard';
 
-function CopyButton({ text, className = '' }) {
+function CopyButton({ text, dark = false, className = '' }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async (e) => {
@@ -40,10 +40,14 @@ function CopyButton({ text, className = '' }) {
       onClick={handleCopy}
       title={copied ? 'Copied!' : 'Copy text'}
       aria-label={copied ? 'Copied!' : 'Copy text'}
-      className={`p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-all duration-200 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700/50 shadow-xs focus:outline-none cursor-pointer ${className}`}
+      className={`p-1.5 rounded-md border transition-colors flex items-center justify-center shrink-0 cursor-pointer ${
+        dark
+          ? 'bg-white/10 hover:bg-white/15 border-white/15 text-[#E6DED0]'
+          : 'bg-[#F8F5EE] dark:bg-[#22201D] hover:bg-[#E6DED0] dark:hover:bg-[#2D2924] border-[#DDD4C3] dark:border-[#3A352E] text-[#6B665E] dark:text-[#A69E92] hover:text-[#111111] dark:hover:text-white'
+      } ${className}`}
     >
       {copied ? (
-        <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />
+        <Check className="w-3.5 h-3.5 text-[#254C3B] dark:text-[#4C9A77] stroke-[2.5]" />
       ) : (
         <Copy className="w-3.5 h-3.5 stroke-[1.8]" />
       )}
@@ -57,13 +61,13 @@ function parseMarkdownInline(text) {
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
       return (
-        <strong key={index} className="font-bold text-slate-900 dark:text-white">
+        <strong key={index} className="font-semibold text-[#111111] dark:text-white">
           {part.slice(2, -2)}
         </strong>
       );
     } else if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
       return (
-        <em key={index} className="italic text-slate-700 dark:text-slate-200">
+        <em key={index} className="italic text-[#6B665E] dark:text-[#C8C1B6]">
           {part.slice(1, -1)}
         </em>
       );
@@ -85,7 +89,7 @@ function RenderFormattedContent({ content }) {
         if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
           return (
             <div key={lineIdx} className="flex items-start gap-2 pl-2">
-              <span className="text-indigo-600 dark:text-indigo-400 font-bold">•</span>
+              <span className="text-[#D9541E] font-bold">•</span>
               <div>{parseMarkdownInline(trimmed.slice(2))}</div>
             </div>
           );
@@ -106,91 +110,101 @@ export default function ChatMessage({ message, onOpenMapModal, onCreateScenario 
   const mode = message.mode || (message.scenarioComparison ? 'scenario' : message.analysis ? 'full' : 'casual');
   const analysis = message.analysis;
 
+  // Support both nested ai_insights and top-level insight fields cleanly
+  const insightsRoot = analysis?.ai_insights || analysis || {};
+
   if (isUser) {
     return (
-      <div className="flex justify-end my-4 animate-fade-in">
+      <div className="flex justify-end my-4">
         <div className="flex items-center gap-2.5 max-w-xl">
-          {/* Copy Icon Button BEFORE user message bubble */}
           <CopyButton text={message.content} />
 
-          <div className="bg-indigo-600 text-white p-4 rounded-2xl rounded-tr-none shadow-md shadow-indigo-600/10 text-sm leading-relaxed">
+          <div className="bg-[#111111] dark:bg-[#22201D] text-white dark:text-[#F3EEE3] px-4 py-3 rounded-xl rounded-tr-sm border border-[#111111] dark:border-[#3A352E] text-sm leading-relaxed">
             {message.content}
           </div>
 
-          <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center shrink-0 text-slate-700 dark:text-slate-300">
-            <User className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <div className="w-8 h-8 rounded-lg bg-[#E6DED0] dark:bg-[#22201D] border border-[#C9BFAE] dark:border-[#3A352E] flex items-center justify-center shrink-0 text-[#111111] dark:text-[#F3EEE3]">
+            <User className="w-4 h-4 text-[#D9541E]" />
           </div>
         </div>
       </div>
     );
   }
 
-  // Assistant message
   return (
-    <div className="flex justify-start my-6 animate-fade-in w-full">
-      <div className="flex items-start gap-3 max-w-4xl w-full">
-        {/* AI Avatar */}
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shrink-0 text-white shadow-md shadow-indigo-500/20">
-          <Bot className="w-5 h-5" />
+    <div className="flex justify-start my-6 w-full">
+      <div className="flex items-start gap-3.5 max-w-4xl w-full">
+        {/* Brand AI Avatar */}
+        <div className="w-8 h-8 rounded-lg bg-[#D9541E] flex items-center justify-center shrink-0 text-white mt-0.5">
+          <Compass className="w-4 h-4" />
         </div>
 
-        {/* AI Response Container */}
-        <div className="space-y-4 flex-1 min-w-0">
-          {/* Executive Text Commentary */}
+        {/* Response & Structured Dashboard Body */}
+        <div className="space-y-5 flex-1 min-w-0">
           {message.content && (
-            <div className="text-slate-800 dark:text-slate-200 text-sm leading-relaxed bg-white dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-800/80 shadow-xs">
+            <div className="editorial-panel text-[#111111] dark:text-[#E6DED0] text-sm leading-relaxed p-4 sm:p-5 rounded-xl">
               <RenderFormattedContent content={message.content} />
 
-              {/* Copy Icon Button AFTER complete AI response text */}
-              <div className="flex justify-end mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/50">
+              <div className="flex justify-end mt-3 pt-2.5 border-t border-[#EAE3D5] dark:border-[#2F2B25]">
                 <CopyButton text={message.content} />
               </div>
             </div>
           )}
 
-          {/* Render Scenario Comparison Card if present and mode is scenario */}
           {mode === 'scenario' && message.scenarioComparison && (
             <ScenarioCard scenarioData={message.scenarioComparison} />
           )}
 
-          {/* Render Rich Analysis Cards if present and mode is full */}
           {mode === 'full' && analysis && (
-            <div className="space-y-4">
-              {/* 1. Location Card */}
+            <div className="space-y-5">
+              {/* 1. Location Analysis */}
               {analysis.location_result && (
-                <LocationCard locationData={analysis.location_result} />
+                <LocationCard
+                  locationData={analysis.location_result}
+                  insights={insightsRoot.location_insights || analysis.location_insights}
+                />
               )}
 
-              {/* 2. Performance Card */}
+              {/* 2. ML Performance Prediction */}
               {analysis.performance_result && (
-                <PerformanceCard performanceData={analysis.performance_result} />
+                <PerformanceCard
+                  performanceData={analysis.performance_result}
+                  insights={insightsRoot.performance_insights || analysis.performance_insights}
+                />
               )}
 
-              {/* 3. Competition Card */}
+              {/* 3. Competition Analysis */}
               {analysis.competition_result && (
                 <CompetitionCard
                   competitionData={analysis.competition_result}
                   onOpenMapModal={onOpenMapModal}
+                  insights={insightsRoot.competition_insights || analysis.competition_insights}
                 />
               )}
 
-              {/* 4. Opportunity Card */}
+              {/* 4. Business Opportunity Score */}
               {analysis.opportunity_result && (
                 <OpportunityCard
                   opportunityData={analysis.opportunity_result}
                   onCreateScenario={onCreateScenario}
+                  insights={insightsRoot.opportunity_insights || analysis.opportunity_insights}
                 />
               )}
 
-              {/* 5. Financial Analysis Card */}
+              {/* 5. Financial Analysis */}
               {(analysis.financial || analysis.financial_result) && (
                 <FinancialCard
                   financialData={analysis.financial || analysis.financial_result}
+                  onCreateScenario={onCreateScenario}
+                  insights={insightsRoot.financial_insights || analysis.financial_insights}
                 />
               )}
 
-              {/* 6. What This Means (User-Friendly English Summary) */}
-              <WhatThisMeansCard analysis={analysis} />
+              {/* 6. Executive Summary / What This Means */}
+              <WhatThisMeansCard
+                analysis={analysis}
+                recommendations={insightsRoot.business_recommendations || analysis.business_recommendations}
+              />
             </div>
           )}
         </div>

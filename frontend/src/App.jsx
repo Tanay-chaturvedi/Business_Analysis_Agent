@@ -33,11 +33,11 @@ export default function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
 
-  // Theme State with localStorage persistence & system preference fallback
+  // Theme State with localStorage persistence (defaults to signature Cream editorial theme)
   const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('biz_theme');
-    if (saved) return saved;
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const saved = localStorage.getItem('biz_theme_editorial');
+    if (saved === 'dark' || saved === 'light') return saved;
+    return 'light';
   });
 
   // Sidebar Collapsed State with localStorage persistence
@@ -61,7 +61,7 @@ export default function App() {
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('biz_theme', theme);
+    localStorage.setItem('biz_theme_editorial', theme);
   }, [theme]);
 
   // Persist sidebar collapsed state
@@ -214,8 +214,6 @@ export default function App() {
       lower.startsWith('how does') ||
       lower.startsWith('tell me') ||
       lower.includes('meaning of') ||
-      lower.includes('what is shap') ||
-      lower.includes('what does shap') ||
       lower.includes('what is google places') ||
       lower.includes('what is random forest')
     ) {
@@ -336,7 +334,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F3EEE3] dark:bg-[#111111] text-[#111111] dark:text-[#F3EEE3] font-sans transition-colors duration-200">
       {/* Left Sidebar */}
       <Sidebar
         historyItems={historyItems}
@@ -354,7 +352,7 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#F3EEE3] dark:bg-[#111111] transition-colors duration-200">
         {/* Header Bar */}
         <Header
           isSidebarCollapsed={isSidebarCollapsed}
@@ -365,23 +363,23 @@ export default function App() {
           onNewAnalysis={handleNewAnalysis}
           currentTitle={
             messages.length > 0 && messages[0].content
-              ? messages[0].content.slice(0, 32) + '...'
+              ? messages[0].content.slice(0, 38) + (messages[0].content.length > 38 ? '...' : '')
               : 'BizAdvisor'
           }
         />
 
         {/* Error Toast if any */}
         {errorMessage && (
-          <div className="bg-rose-500/10 border-b border-rose-500/20 px-4 py-2.5 text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
-            <span>⚠️ {errorMessage}</span>
-            <button onClick={() => setErrorMessage(null)} className="font-bold underline hover:opacity-80 cursor-pointer">
+          <div className="bg-[#A63222]/10 border-b border-[#A63222]/25 px-4 sm:px-6 py-2.5 text-xs text-[#A63222] dark:text-[#E06C5B] flex items-center justify-between">
+            <span>{errorMessage}</span>
+            <button onClick={() => setErrorMessage(null)} className="font-semibold underline hover:opacity-80 cursor-pointer">
               Dismiss
             </button>
           </div>
         )}
 
         {/* Chat / Content Area */}
-        <div className="flex-1 overflow-y-auto px-4 lg:px-8 py-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 py-6">
           {messages.length === 0 ? (
             <EmptyState onSelectPrompt={handleSendMessage} />
           ) : (
