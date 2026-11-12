@@ -145,8 +145,8 @@ def build_business_takeaway(
 
     # --- Performance ---
     pred_class = perf.get("prediction", "Moderate")          # High | Medium | Low
-    high_prob  = perf.get("probabilities", {}).get("High")
-    high_prob_pct = f"{round(high_prob * 100)}%" if high_prob is not None else None
+    pred_prob  = perf.get("probabilities", {}).get(pred_class)
+    pred_prob_pct = f"{round(pred_prob * 100)}%" if pred_prob is not None else None
 
     hist_perf  = opp.get("historical_performance", {})
     perf_signal = hist_perf.get("signal", "")  # e.g. "Strong historical performance"
@@ -163,7 +163,7 @@ def build_business_takeaway(
     loc_short = location.split(",")[0].strip()  # e.g. "Koramangala"
 
     # ── Sentence 1: Concept + performance signal ─────────────────────────────
-    prob_clause = f", with the model indicating a {high_prob_pct} probability of high performance" if high_prob_pct else ""
+    prob_clause = f", with the model indicating a {pred_prob_pct} probability of {pred_class.lower()} performance" if pred_prob_pct else ""
     s1 = (
         f"The {cuisine} {rest_type.lower()} concept in {loc_short} shows "
         f"{perf_signal.lower() if perf_signal else 'a moderate historical performance signal'}"
@@ -774,7 +774,7 @@ def health_check():
         "status": "ok",
         "service": "BizAdvisor Backend API",
         "orchestration": "Deterministic multi-stage pipeline + Gemini",
-        "ml_model": "Random Forest + SHAP",
+        "ml_model": "Random Forest",
         "timestamp": datetime.datetime.now().isoformat()
     }
 
@@ -807,6 +807,18 @@ def run_analysis_endpoint(
             rest_type=req.restaurant_type,
             radius_km=req.radius_km
         )
+
+        ai_insights = analysis_output.get("ai_insights") or {}
+        for insight_key in (
+            "location_insights",
+            "performance_insights",
+            "competition_insights",
+            "opportunity_insights",
+            "financial_insights",
+            "business_recommendations",
+        ):
+            if insight_key in ai_insights and insight_key not in analysis_output:
+                analysis_output[insight_key] = ai_insights[insight_key]
 
         return {
             "status": "success",
@@ -1100,7 +1112,7 @@ def parse_user_query_and_intent(
     """
     Classify user message intent and extract/merge parameters with session context.
     Intents:
-    - CASUAL_QUESTION: General questions, greetings, SHAP, metrics, scores, app concept.
+    - CASUAL_QUESTION: General questions, greetings, metrics, scores, app concept.
     - INCOMPLETE_IDEA: Vague idea like "I want to open a restaurant" without location/cuisine.
     - FOLLOW_UP_SCENARIO: What-if / scenario change on existing session context.
     - NEW_ANALYSIS: Fresh analysis request with new concept / explicit instruction.
@@ -1213,9 +1225,9 @@ def parse_user_query_and_intent(
         answer = None
         if "shap" in msg_lower:
             answer = (
-                "SHAP (SHapley Additive exPlanations) measures how much each input feature pushed the model "
-                "toward or away from a prediction class. It explains **model behavior**, not physical causation — "
-                "meaning it shows what the Random Forest model prioritized when evaluating your concept."
+                "SHAP explainability has been retired in BizAdvisor in favor of direct, integrated LLM synthesis. "
+                "The Random Forest model directly computes statistical performance class probabilities, which our "
+                "AI agents synthesize with location and competition data to explain business drivers in plain language."
             )
         elif "random forest" in msg_lower or "rf" in msg_lower:
             answer = (
@@ -1474,7 +1486,7 @@ def chat_endpoint(
     6. book_table
 
     If any input is missing or ambiguous:
-    - DO NOT run RandomForest, SHAP, Competition, Opportunity, Financial analysis.
+    - DO NOT run RandomForest, Competition, Opportunity, Financial analysis.
     - Ask the user ONLY for the missing/ambiguous details using a clear checklist.
 
     Enforces that conversation belongs to current_user.
@@ -1513,8 +1525,7 @@ def chat_endpoint(
         # ---------------------------------------------------------------------
         if intent == "CASUAL_QUESTION":
             ai_message = parsed_result.get("casual_answer") or (
-                "SHAP (SHapley Additive exPlanations) measures how much each input feature pushed the model "
-                "toward or away from a prediction class."
+                "BizAdvisor combines Random Forest machine learning predictions, real-time Google Places competitor analysis, and deterministic financial simulation to evaluate restaurant concepts in Bengaluru."
             )
             save_chat_turn(
                 db,
@@ -1765,18 +1776,32 @@ def chat_endpoint(
                 sign = "+" if prob_delta > 0 else ""
                 summary_notes.append(f"High-performance probability shifted by {sign}{prob_delta}% points.")
 
-            from src.ml.explainer import compare_shap_drivers
+            # Model parameter driver shifts (derived directly from input deltas and probabilities)
+            model_driver_changes = []
+            for cf in changed_fields:
+                field_name = cf.get("field", "") if isinstance(cf, dict) else str(cf)
+                disp_name = cf.get("display_name", field_name.replace("_", " ").title()) if isinstance(cf, dict) else field_name.replace("_", " ").title()
+                b_val = prev_params.get(field_name, "N/A")
+                s_val = params.get(field_name, "N/A")
+                model_driver_changes.append({
+                    "field": field_name,
+                    "display_name": disp_name,
+                    "baseline_value": str(b_val),
+                    "scenario_value": str(s_val),
+                    "direction": "positive" if prob_delta > 0 else ("negative" if prob_delta < 0 else "neutral")
+                })
 
-            shap_analysis = compare_shap_drivers(
-                base_params=prev_params,
-                scen_params=params,
-                loc_ctx=loc_res,
-                target_class="High",
-                top_n=5
-            )
-
-            model_driver_changes = shap_analysis.get("model_driver_changes", [])
-            prob_explanation_dict = shap_analysis.get("probability_explanation", {})
+            prob_explanation_dict = {
+                "baseline_high_probability": base_high_prob,
+                "scenario_high_probability": scen_high_prob,
+                "delta_pct": prob_delta,
+                "summary": (
+                    f"The model's predicted High-performance probability shifted by {prob_delta:+0.1f}% points "
+                    f"({base_high_prob}% → {scen_high_prob}%) based on the modified scenario inputs."
+                    if prob_delta != 0 else
+                    f"The model's predicted High-performance probability remained unchanged at {base_high_prob}%."
+                )
+            }
 
             opportunity_breakdown_dict = {
                 "baseline_performance": base_perf_score,
@@ -1950,8 +1975,38 @@ def chat_endpoint(
             comp_count = len(comp_res.get("competitors", [])) or comp_res.get("competition_summary", {}).get("competitor_count_retrieved", 0)
             comp_res["competitor_count"] = comp_count
 
-            pred_class = analysis.get("performance_result", {}).get("prediction", "Unknown")
-            opp_score = analysis.get("opportunity_result", {}).get("opportunity_score", {}).get("score", 0)
+            perf_res = analysis.get("performance_result", {})
+            pred_class = perf_res.get("prediction", "Unknown")
+            pred_prob_raw = (perf_res.get("probabilities") or {}).get(pred_class)
+            if pred_prob_raw is None:
+                for k, v in (perf_res.get("probabilities") or {}).items():
+                    if str(k).lower() == str(pred_class).lower():
+                        pred_prob_raw = v
+                        break
+            pred_prob_str = ""
+            if pred_prob_raw is not None:
+                try:
+                    num = float(pred_prob_raw)
+                    pct = round(num * 100.0 if num <= 1.0 else num, 1)
+                    pred_prob_str = f" ({pct}% class probability)"
+                except (TypeError, ValueError):
+                    pass
+
+            opp_obj = analysis.get("opportunity_result", {}).get("opportunity_score", {})
+            opp_score = opp_obj.get("score", 0)
+            opp_signal = opp_obj.get("signal", "Moderate")
+
+            ai_insights = analysis.get("ai_insights") or {}
+            for insight_key in (
+                "location_insights",
+                "performance_insights",
+                "competition_insights",
+                "opportunity_insights",
+                "financial_insights",
+                "business_recommendations",
+            ):
+                if insight_key in ai_insights and insight_key not in analysis:
+                    analysis[insight_key] = ai_insights[insight_key]
 
             # Inject backend-generated Business Takeaway into analysis
             # so the frontend displays and reads the EXACT same text.
@@ -1963,9 +2018,9 @@ def chat_endpoint(
             )
 
             ai_message = (
-                f"Nice — let's test that **{cuisine}** concept in **{location}** with an estimated cost of **₹{int(cost):,} for two**.\n\n"
-                f"Our Random Forest model predicts a **{pred_class}** probability of success with an Opportunity Score of **{opp_score}/100** "
-                f"and **{comp_count} direct competitors** nearby."
+                f"Here is the complete assessment for your **{cuisine}** concept in **{location}** (target cost **₹{int(cost):,} for two**).\n\n"
+                f"The Random Forest model classifies this concept in the **{pred_class}** historical performance tier{pred_prob_str}, "
+                f"with a composite Opportunity Score of **{opp_score}/100 ({opp_signal})** and **{comp_count} nearby competitors**."
             )
 
             title = f"{cuisine} Restaurant · {location.split(',')[0]}"
