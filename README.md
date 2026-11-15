@@ -17,13 +17,12 @@ An AI-powered business intelligence and decision-support platform designed to ev
 - **Live Competitor Discovery:** Converts human-readable Bengaluru localities into geographic coordinates and queries the Google Places API (`places:searchText`) for up to 20 direct competitors within a 3 km radius, calculating average ratings and review counts.
 - **Composite Opportunity Score (0–100):** Combines historical ML performance indicators (60% weight) and local competitive saturation (40% weight) into an opportunity score and risk tier (`Low`, `Moderate`, or `High`).
 - **Deterministic Monthly Financial Modeling:** Calculates monthly revenue, variable food costs, itemized operating expenses (rent, staff, utilities, marketing, other), estimated operating profit, operating profit margin %, and break-even customer targets per day and month.
-- **Interactive What-If Scenario Analysis:** Compares baseline concepts against operational and financial parameter adjustments (e.g., changes in customer volume, rent, or staff costs) without retraining the ML model or making new Google Places API calls.
 - **Three-Tier Resilient AI Insights:** Generates 2–3 structured insight bullets per analysis section using a dual-model LLM failover hierarchy backed by a deterministic Python fallback:
   1. Primary LLM via LiteLLM (`groq/openai/gpt-oss-120b`)
   2. Secondary LLM fallback (`groq/qwen/qwen3.8-27b`)
   3. Deterministic Python rule-based insights (`_get_fallback_insights`)
 - **User Authentication & Session Persistence:** Argon2id password hashing, PyJWT access tokens, rate limiting via SlowAPI, and full conversation/analysis persistence in MySQL with cascading deletes.
-- **Frontend Dashboard:** React 19 single-page application built with Vite and Tailwind CSS v4, featuring analytical cards, interactive What-If sliders, Leaflet competitor maps, and Web Speech API audio synthesis.
+- **Frontend Dashboard:** React 19 single-page application built with Vite and Tailwind CSS v4, featuring analytical cards, Leaflet competitor maps, and Web Speech API audio synthesis.
 
 ---
 
@@ -92,7 +91,7 @@ flowchart TD
 
 ---
 
-## 4. Financial Modeling & What-If Analysis
+## 4. Financial Modeling
 
 ### Monthly Unit Economics (`src/finance/simulator.py`)
 
@@ -115,13 +114,6 @@ $$\text{Break-Even Target Customers/Day} = \left\lceil \frac{\text{Fixed Operati
 **Current Modeling Limitations:**
 - Calculates estimated operating profit (EBITDA proxy); does not calculate net profit after taxes.
 - Does not model GST, income tax, depreciation, loan interest/EMI, or food delivery aggregator commissions (e.g., Swiggy/Zomato fees).
-
-### What-If Scenario Modeler (`src/analysis/what_if.py`)
-
-The scenario engine provides side-by-side comparative analysis between baseline inputs and modified operational scenarios:
-- **Financial What-If (`compare_financial_scenarios`):** Recalculates cost and revenue deltas when variables like rent, staff cost, or customer count change. Does not invoke the ML model or Google Places.
-- **ML What-If (`compare_ml_scenarios`):** Re-evaluates model probabilities when operational features (e.g., table booking, cuisine, cost) change. Does not retrain the model or call Google Places.
-- **Zero-Division Protection:** All percentage change calculations use `_safe_pct_change` to safely return `None` or `0.0` when baseline values are zero.
 
 ---
 
@@ -156,7 +148,7 @@ flowchart TD
 - **Startup Secret Validation:** Server fails to start if `JWT_SECRET_KEY` is missing, empty, shorter than 32 characters, or matches common insecure placeholders (e.g., `"secret"`, `"changeme"`).
 - **Rate Limiting:** Managed via `SlowAPI` with in-memory limits per IP:
   - `/api/auth/register` & `/api/auth/login`: 10 requests / minute
-  - `/api/analyze` & `/api/scenario`: 20 requests / minute
+  - `/api/analyze`: 20 requests / minute
   - `/api/chat`: 30 requests / minute
   - `/api/financial/simulate`, `/api/history`, `/api/history/{session_id}` (GET): 60 requests / minute
   - `/api/history/{session_id}` (DELETE): 30 requests / minute
@@ -202,7 +194,7 @@ erDiagram
         string role "String(20), user or assistant"
         text content "Text, Message body"
         string message_type "String(50), message type"
-        json metadata_json "JSON, Stores analysis, parameters, scenario diffs"
+        json metadata_json "JSON, Stores analysis, parameters, and metadata"
         datetime created_at "UTC DateTime, Indexed"
     }
 ```
@@ -221,7 +213,6 @@ All application endpoints are served by FastAPI (`server.py`):
 | `GET` | `/api/health` | Public | 120 / min | Service health check reporting operational status. |
 | `POST` | `/api/analyze` | Bearer JWT | 20 / min | Run full analysis directly from structured request parameters. |
 | `POST` | `/api/chat` | Bearer JWT | 30 / min | Conversational business analysis endpoint with 6-input validation. |
-| `POST` | `/api/scenario` | Bearer JWT | 20 / min | Run What-If comparative analysis between baseline and scenario parameters. |
 | `POST` | `/api/financial/simulate` | Public | 60 / min | Recalculate deterministic unit economics from input assumptions. |
 | `GET` | `/api/history` | Bearer JWT | 60 / min | List conversations belonging to the authenticated user (supports `?search=`). |
 | `GET` | `/api/history/{session_id}` | Bearer JWT | 60 / min | Retrieve full conversation turn history and analysis payload by ID. |
@@ -276,7 +267,6 @@ Business_Analysis_Agent/
 │   │   │   ├── Auth/                      # Authentication modals
 │   │   │   ├── Chat/                      # Message list & input components
 │   │   │   ├── Map/                       # Leaflet interactive map modal
-│   │   │   ├── Scenario/                  # What-If scenario builder drawer
 │   │   │   └── Sidebar/                   # Conversation history sidebar
 │   │   ├── services/
 │   │   │   └── api.js                     # Axios HTTP client with JWT interceptor
@@ -305,8 +295,7 @@ Business_Analysis_Agent/
 │   │   └── performance_agent.py           # ML performance agent
 │   ├── analysis/
 │   │   ├── location_context.py            # Historical neighborhood metrics lookup
-│   │   ├── opportunity.py                 # Opportunity score algorithm
-│   │   └── what_if.py                     # What-If comparative scenario logic
+│   │   └── opportunity.py                 # Opportunity score algorithm
 │   ├── finance/
 │   │   └── simulator.py                   # Deterministic unit economics model
 │   ├── places/
@@ -317,7 +306,7 @@ Business_Analysis_Agent/
 │   ├── test_financial_accuracy.py         # Financial calculation unit tests (11 tests)
 │   ├── test_mysql_integration.py          # Database CRUD integration tests (4 tests)
 │   ├── test_mysql_regression.py           # Session recovery regression tests (4 tests)
-│   └── test_security.py                   # Auth, JWT, rate limiting tests (14 tests)
+│   └── test_security.py                   # Auth, JWT, rate limiting tests (13 tests)
 ├── .env.example                           # Sample environment configuration
 ├── requirements.txt                       # Backend Python dependencies
 ├── server.py                              # FastAPI backend entrypoint
