@@ -7,8 +7,8 @@ Validates:
 2. Conversation creation and title generation.
 3. Message creation and cascade deletion.
 4. Saving and loading structured analysis JSON (location, ML prediction, SHAP, competition, opportunity score, financials).
-5. Saving What-If scenario comparisons.
-6. FastAPI endpoints: /api/history, /api/history/{id}, DELETE /api/history/{id}, /api/scenario, /api/chat.
+5. Saving and loading conversation messages.
+6. FastAPI endpoints: /api/history, /api/history/{id}, DELETE /api/history/{id}, /api/chat.
 """
 
 import os

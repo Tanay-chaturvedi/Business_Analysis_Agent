@@ -5,14 +5,13 @@ Covers:
 2. Invalid credentials are rejected with generic errors.
 3. Passwords are stored only as secure Argon2id hashes.
 4. Missing, expired, malformed, or invalidly signed tokens are rejected.
-5. An unauthenticated user cannot access protected endpoints (/api/chat, /api/analyze, /api/scenario, /api/history).
+5. An unauthenticated user cannot access protected endpoints (/api/chat, /api/analyze, /api/history).
 6. User A cannot list or retrieve User B's conversations.
 7. User A cannot delete User B's conversations.
-8. User A cannot run a scenario against User B's session.
-9. A client-supplied user ID cannot override the authenticated identity.
-10. CORS rejects untrusted origins / allows configured origins.
-11. Login and API rate limits are enforced.
-12. Existing conversation/message persistence and cascade deletion still work.
+8. A client-supplied user ID cannot override the authenticated identity.
+9. CORS rejects untrusted origins / allows configured origins.
+10. Login and API rate limits are enforced.
+11. Existing conversation/message persistence and cascade deletion still work.
 """
 
 import os
@@ -163,8 +162,6 @@ def test_5_unauthenticated_user_cannot_access_protected_routes():
     assert client.post("/api/chat", json={"message": "Hello"}).status_code == 401
     # /api/analyze
     assert client.post("/api/analyze", json={"location": "Koramangala, Bengaluru"}).status_code == 401
-    # /api/scenario
-    assert client.post("/api/scenario", json={"baseline_params": {}, "scenario_params": {}}).status_code == 401
 
 
 def test_6_user_a_cannot_list_or_retrieve_user_b_conversations():
@@ -231,39 +228,8 @@ def test_7_user_a_cannot_delete_user_b_conversations():
         db.close()
 
 
-def test_8_user_a_cannot_run_scenario_on_user_b_session():
-    """8. User A cannot run a scenario against User B's session."""
-    _, token_a = create_test_user("usera_scen")
-    headers_a = {"Authorization": f"Bearer {token_a}"}
-
-    _, token_b = create_test_user("userb_scen")
-    headers_b = {"Authorization": f"Bearer {token_b}"}
-
-    # User B creates session
-    session_b = f"sess_scen_{uuid.uuid4().hex[:8]}"
-    client.post("/api/chat", headers=headers_b, json={
-        "message": "User B session for scenario test",
-        "session_id": session_b,
-    })
-
-    # User A attempts to run scenario against User B's session
-    scen_res = client.post("/api/scenario", headers=headers_a, json={
-        "baseline_params": {"location": "Koramangala, Bengaluru", "approx_cost_for_two": 800.0},
-        "scenario_params": {"location": "Indiranagar, Bengaluru", "approx_cost_for_two": 1200.0},
-        "session_id": session_b,
-    })
-    assert scen_res.status_code == 403
-
-    # Clean up
-    db = SessionLocal()
-    try:
-        delete_conversation(db, session_b)
-    finally:
-        db.close()
-
-
-def test_9_client_cannot_spoof_user_id():
-    """9. A client-supplied user ID cannot override the authenticated identity."""
+def test_8_client_cannot_spoof_user_id():
+    """8. A client-supplied user ID cannot override the authenticated identity."""
     _, token = create_test_user("user_spoof")
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -289,8 +255,8 @@ def test_9_client_cannot_spoof_user_id():
         db.close()
 
 
-def test_10_security_headers_present():
-    """10. Security headers are present on responses."""
+def test_9_security_headers_present():
+    """9. Security headers are present on responses."""
     res = client.get("/api/health")
     assert res.status_code == 200
     headers = res.headers
@@ -299,8 +265,8 @@ def test_10_security_headers_present():
     assert headers.get("X-XSS-Protection") == "1; mode=block"
 
 
-def test_11_login_rate_limiting_enforced():
-    """11. Login and API rate limits are enforced."""
+def test_10_login_rate_limiting_enforced():
+    """10. Login and API rate limits are enforced."""
     # Attempt rapid repeated logins with incorrect credentials
     rapid_results = []
     for _ in range(15):
@@ -314,8 +280,8 @@ def test_11_login_rate_limiting_enforced():
     assert 429 in rapid_results, f"Rate limiter failed to trigger 429: {rapid_results}"
 
 
-def test_12_cascade_deletion_preserved():
-    """12. Existing conversation/message cascade deletion still works."""
+def test_11_cascade_deletion_preserved():
+    """11. Existing conversation/message cascade deletion still works."""
     db = SessionLocal()
     session_id = f"test-cascade-{uuid.uuid4()}"
     try:
@@ -341,8 +307,8 @@ def test_12_cascade_deletion_preserved():
         db.close()
 
 
-def test_13_jwt_secret_validation_rejects_missing_empty_and_placeholders(monkeypatch):
-    """13. JWT secret validator rejects missing, empty, short, and placeholder secrets safely."""
+def test_12_jwt_secret_validation_rejects_missing_empty_and_placeholders(monkeypatch):
+    """12. JWT secret validator rejects missing, empty, short, and placeholder secrets safely."""
     # 1. Missing secret
     with pytest.raises(RuntimeError) as exc_info:
         validate_jwt_secret(None)
@@ -380,8 +346,8 @@ def test_13_jwt_secret_validation_rejects_missing_empty_and_placeholders(monkeyp
     assert "missing" in str(exc_info.value).lower()
 
 
-def test_14_jwt_secret_validation_accepts_valid_configuration(monkeypatch):
-    """14. JWT secret validator accepts valid 32+ character secrets without exposing them."""
+def test_13_jwt_secret_validation_accepts_valid_configuration(monkeypatch):
+    """13. JWT secret validator accepts valid 32+ character secrets without exposing them."""
     dummy_valid = "x" * 48
     result = validate_jwt_secret(dummy_valid)
     assert len(result) == 48
