@@ -122,7 +122,7 @@ def _get_fallback_insights(d: dict) -> dict:
     rec = [
         f"Opportunity: Capitalize on {d['cuisine']} demand in {d['location']} with pricing matching local spending.",
         f"Risk: High competitor density ({d['competitor_count']} outlets) leaves little margin for operational inconsistency.",
-        "Next Step: Validate physical footfall at peak hours and stress-test assumptions using What-If Scenarios.",
+        "Next Step: Validate physical footfall at peak hours and stress-test assumptions using unit economics.",
     ]
 
     return {

@@ -28,7 +28,6 @@ from dotenv import load_dotenv
 # Import existing backend modules
 # coordinator orchestration managed via adk_runner
 from src.agent.adk_runner import run_analysis_via_adk  # Genuine ADK runtime wrapper
-from src.analysis.what_if import compare_financial_scenarios
 from src.ml.predictor import predict_business_performance
 
 # Import authentication and security
@@ -244,12 +243,6 @@ class ChatRequest(BaseModel):
     message: str = Field(..., json_schema_extra={"example": "I want to open a premium Japanese restaurant in Koramangala, Bengaluru. Cost for two is ₹1800."})
     session_id: Optional[str] = None
     parameters_override: Optional[Dict[str, Any]] = None
-
-class ScenarioRequest(BaseModel):
-    baseline_params: Dict[str, Any]
-    scenario_params: Dict[str, Any]
-    session_id: Optional[str] = None
-
 
 class FinancialSimulateRequest(BaseModel):
     customers_per_day: float = Field(default=100.0, ge=0)
@@ -1114,7 +1107,7 @@ def parse_user_query_and_intent(
     Intents:
     - CASUAL_QUESTION: General questions, greetings, metrics, scores, app concept.
     - INCOMPLETE_IDEA: Vague idea like "I want to open a restaurant" without location/cuisine.
-    - FOLLOW_UP_SCENARIO: What-if / scenario change on existing session context.
+    - FOLLOW_UP_SCENARIO: Parameter adjustment / update on existing session context.
     - NEW_ANALYSIS: Fresh analysis request with new concept / explicit instruction.
     """
     msg_lower = user_message.lower().strip()
@@ -1158,7 +1151,7 @@ def parse_user_query_and_intent(
         elif "how can u help" in msg_lower or "how can you help" in msg_lower or "what can you do" in msg_lower:
             answer = f"Hi{name_prefix}! BizAdvisor combines historical Zomato location benchmarks, Random Forest ML performance predictions, and real-time Google Places competitor discovery to guide restaurant investment decisions."
         elif "cool" in msg_lower or "nice" in msg_lower or "great" in msg_lower or "awesome" in msg_lower or "interesting" in msg_lower:
-            answer = f"Glad you find it helpful{name_prefix}! Let me know if you want to test any what-if scenarios or adjust your concept."
+            answer = f"Glad you find it helpful{name_prefix}! Let me know if you want to adjust your concept or analyze another location."
         else:
             answer = f"Hey{name_prefix}! 👋 What business idea are you exploring? Share your restaurant concept, location, or target cost, or ask me any question about market metrics!"
 
@@ -1217,11 +1210,10 @@ def parse_user_query_and_intent(
     # --- DIAGNOSTIC LOGGING (temporary, request-scoped) ---
     print(f"[ROUTING] has_loc={has_loc} | has_cuis={has_cuis} | has_cost={has_cost}")
 
-    # If prompt specifies explicit business idea (e.g. location + cuisine/cost) or explicit what-if scenario, it's not a casual question
+    # If prompt specifies explicit business idea (e.g. location + cuisine/cost), it's not a casual question
     has_explicit_analysis = (has_loc and (has_cuis or has_cost)) or "new analysis" in msg_lower or "fresh analysis" in msg_lower
-    is_what_if_scenario = "what if" in msg_lower or "how about" in msg_lower or "reduce" in msg_lower or "increase" in msg_lower or "switch to" in msg_lower or "change" in msg_lower
 
-    if is_question and not has_explicit_analysis and not is_what_if_scenario and not (prev_params and not has_baseline):
+    if is_question and not has_explicit_analysis and not (prev_params and not has_baseline):
         answer = None
         if "shap" in msg_lower:
             answer = (
@@ -1382,7 +1374,7 @@ STRICT RULES:
 
             # ── CRITICAL DEFENSIVE SCENARIO ISOLATION ──────────────────────────────
             if (
-                (parsed.get("intent") == "FOLLOW_UP_SCENARIO" or is_what_if_scenario)
+                parsed.get("intent") == "FOLLOW_UP_SCENARIO"
                 and prev_params
                 and has_baseline
             ):
@@ -1395,7 +1387,7 @@ STRICT RULES:
                     "changed_field_keys": cf_keys,
                     "params": scen_params
                 }
-            elif (parsed.get("intent") in ["FOLLOW_UP_SCENARIO", "CASUAL_QUESTION"]) and prev_params and not has_baseline and not is_what_if_scenario:
+            elif (parsed.get("intent") in ["FOLLOW_UP_SCENARIO", "CASUAL_QUESTION"]) and prev_params and not has_baseline:
                 fresh = parse_user_query(user_message)
                 if any(fresh.get(k) is not None for k in ["approx_cost_for_two", "restaurant_type", "online_order", "book_table", "location", "primary_cuisine"]):
                     parsed["intent"] = "NEW_ANALYSIS"
@@ -1419,7 +1411,7 @@ STRICT RULES:
             print(f"[QueryParser Warning] Gemini intent parsing error: {e}. Falling back to rule parser.")
 
     # Rule-based fallback parser for follow-up scenarios
-    if is_what_if_scenario or (prev_params and has_baseline and not is_explicit_new):
+    if prev_params and has_baseline and not is_explicit_new:
         scen_params, rich_cf, cf_keys = isolate_scenario_parameters(user_message, prev_params or {}, None)
         print(f"[ROUTING] intent=FOLLOW_UP_SCENARIO | changed_field_keys={cf_keys}")
         print(f"[ROUTING] parameters={json.dumps(scen_params, ensure_ascii=False)}")
@@ -1596,39 +1588,6 @@ def chat_endpoint(
         # Validate accumulated parameters
         validation = validate_accumulated_parameters(accumulated_params, amb_flags)
 
-        msg_lower = req.message.lower()
-        is_what_if_request = (intent == "FOLLOW_UP_SCENARIO") or any(w in msg_lower for w in ["what if", "how about", "increase", "reduce", "switch to", "change cost", "change price"])
-
-        # ---------------------------------------------------------------------
-        # WHAT-IF WITHOUT BASELINE CHECK
-        # ---------------------------------------------------------------------
-        if is_what_if_request and prev_analysis is None:
-            missing_prompt = build_missing_inputs_response(validation["missing_inputs"], validation["ambiguous_inputs"])
-            ai_message = f"A baseline business analysis must be completed before running What-If scenarios.\n\n{missing_prompt}"
-
-            save_chat_turn(
-                db,
-                session_id=session_id,
-                user_message=req.message,
-                ai_message=ai_message,
-                mode="casual",
-                title="Incomplete Analysis",
-                parameters=accumulated_params,
-                user_id=current_user.id,
-            )
-
-            return {
-                "session_id": session_id,
-                "intent": "NEEDS_INPUT",
-                "status": "needs_input",
-                "mode": "casual",
-                "ai_message": ai_message,
-                "parameters": accumulated_params,
-                "analysis": None,
-                "scenario_comparison": None,
-                "timestamp": datetime.datetime.now().isoformat()
-            }
-
         # ---------------------------------------------------------------------
         # MISSING / AMBIGUOUS INPUTS CHECK (BEFORE RUNNING ANY ANALYSIS TOOLS)
         # ---------------------------------------------------------------------
@@ -1661,15 +1620,9 @@ def chat_endpoint(
 
 
         # ---------------------------------------------------------------------
-        # ALL 6 REQUIRED INPUTS PRESENT: EXECUTE FULL ANALYSIS OR WHAT-IF
+        # ALL 6 REQUIRED INPUTS PRESENT: EXECUTE FULL ANALYSIS
         # ---------------------------------------------------------------------
-        is_scenario = is_what_if_request and (prev_analysis is not None)
-        rich_changed_fields = []
-        if is_scenario:
-            params, rich_changed_fields, changed_field_keys = isolate_scenario_parameters(req.message, prev_params, extracted_p)
-            accumulated_params = params
-        else:
-            params = accumulated_params
+        params = accumulated_params
 
         cost = float(params["approx_cost_for_two"])
         cost_band = derive_cost_band(cost)
@@ -1680,373 +1633,98 @@ def chat_endpoint(
         book_table = 1 if params["book_table"] else 0
         search_q = f"{cuisine} restaurant in {location}"
 
-        changed_fields = rich_changed_fields
+        # Full business analysis execution
+        analysis = run_analysis_via_adk(
+            location=location,
+            search_query=search_q,
+            online_order=online_order,
+            book_table=book_table,
+            approx_cost=cost,
+            cost_band=cost_band,
+            primary_cuisine=cuisine,
+            cuisine_count=params.get("cuisine_count", 2),
+            rest_type=rest_type,
+            radius_km=3.0,
+            session_id=session_id,
+        )
+        _orchestration_mode = analysis.pop("_orchestration", "unknown")
 
-        scenario_comparison_data = None
+        comp_res = analysis.get("competition_result", {})
+        comp_count = len(comp_res.get("competitors", [])) or comp_res.get("competition_summary", {}).get("competitor_count_retrieved", 0)
+        comp_res["competitor_count"] = comp_count
 
-        if is_scenario and prev_analysis and not any(f in changed_fields for f in ["location"]):
-            # Price / Cuisine / Feature change only — REUSE location context & Google Places!
-            loc_res = prev_analysis.get("location_result", {})
-            comp_res = prev_analysis.get("competition_result", {})
+        perf_res = analysis.get("performance_result", {})
+        pred_class = perf_res.get("prediction", "Unknown")
+        pred_prob_raw = (perf_res.get("probabilities") or {}).get(pred_class)
+        if pred_prob_raw is None:
+            for k, v in (perf_res.get("probabilities") or {}).items():
+                if str(k).lower() == str(pred_class).lower():
+                    pred_prob_raw = v
+                    break
+        pred_prob_str = ""
+        if pred_prob_raw is not None:
+            try:
+                num = float(pred_prob_raw)
+                pct = round(num * 100.0 if num <= 1.0 else num, 1)
+                pred_prob_str = f" ({pct}% class probability)"
+            except (TypeError, ValueError):
+                pass
 
-            from src.ml.predictor import predict_business_performance
-            from src.agent.opportunity_agent import opportunity_analysis_tool
+        opp_obj = analysis.get("opportunity_result", {}).get("opportunity_score", {})
+        opp_score = opp_obj.get("score", 0)
+        opp_signal = opp_obj.get("signal", "Moderate")
 
-            perf_res = predict_business_performance(
-                online_order=online_order,
-                book_table=book_table,
-                approx_costfor_two_people=cost,
-                cost_band=cost_band,
-                location=location.split(",")[0].strip(),
-                primary_cuisine=cuisine,
-                cuisine_count=params.get("cuisine_count", 2),
-                primary_rest_type=rest_type,
-                historical_restaurant_count=loc_res.get("historical_restaurant_count", 1000),
-                location_median_cost=loc_res.get("location_median_cost", 500.0),
-                location_online_order_rate=loc_res.get("location_online_order_rate", 0.6),
-                location_book_table_rate=loc_res.get("location_book_table_rate", 0.15),
-                location_cuisine_diversity=loc_res.get("location_cuisine_diversity", 10),
-                location_business_type_diversity=loc_res.get("location_business_type_diversity", 5)
-            )
+        ai_insights = analysis.get("ai_insights") or {}
+        for insight_key in (
+            "location_insights",
+            "performance_insights",
+            "competition_insights",
+            "opportunity_insights",
+            "financial_insights",
+            "business_recommendations",
+        ):
+            if insight_key in ai_insights and insight_key not in analysis:
+                analysis[insight_key] = ai_insights[insight_key]
 
-            prob_dict = perf_res.get("probabilities", {})
-            comp_summary = comp_res.get("competition_summary", {})
-            opp_res = opportunity_analysis_tool(
-                probabilities=prob_dict,
-                model_classes=list(prob_dict.keys()),
-                competition_summary=comp_summary
-            )
+        # Inject backend-generated Business Takeaway into analysis
+        # so the frontend displays and reads the EXACT same text.
+        analysis["business_takeaway"] = build_business_takeaway(
+            location=location,
+            cuisine=cuisine,
+            rest_type=rest_type,
+            analysis=analysis,
+        )
 
-            analysis = {
-                "location_result": loc_res,
-                "performance_result": perf_res,
-                "competition_result": comp_res,
-                "opportunity_result": opp_res
-            }
+        ai_message = (
+            f"Here is the complete assessment for your **{cuisine}** concept in **{location}** (target cost **₹{int(cost):,} for two**).\n\n"
+            f"The Random Forest model classifies this concept in the **{pred_class}** historical performance tier{pred_prob_str}, "
+            f"with a composite Opportunity Score of **{opp_score}/100 ({opp_signal})** and **{comp_count} nearby competitors**."
+        )
 
-            base_score = round(float(prev_analysis.get("opportunity_result", {}).get("opportunity_score", {}).get("score", 0.0)), 2)
-            scen_score = round(float(opp_res.get("opportunity_score", {}).get("score", 0.0)), 2)
-            score_delta = round(scen_score - base_score, 2)
+        title = f"{cuisine} Restaurant · {location.split(',')[0]}"
+        save_chat_turn(
+            db,
+            session_id=session_id,
+            user_message=req.message,
+            ai_message=ai_message,
+            mode="full",
+            title=title,
+            parameters=params,
+            analysis=analysis,
+            user_id=current_user.id,
+        )
 
-            base_high_prob = round((prev_analysis.get("performance_result", {}).get("probabilities", {}).get("High", 0.0)) * 100, 1)
-            scen_high_prob = round((perf_res.get("probabilities", {}).get("High", 0.0)) * 100, 1)
-            prob_delta = round(scen_high_prob - base_high_prob, 1)
-
-            base_perf_score = round(float(prev_analysis.get("opportunity_result", {}).get("historical_performance", {}).get("score", 0.0)), 2)
-            scen_perf_score = round(float(opp_res.get("historical_performance", {}).get("score", 0.0)), 2)
-            perf_score_delta = round(scen_perf_score - base_perf_score, 2)
-
-            base_comp_score = round(float(prev_analysis.get("opportunity_result", {}).get("competition_strength", {}).get("score", 0.0)), 2)
-            scen_comp_score = round(float(opp_res.get("competition_strength", {}).get("score", 0.0)), 2)
-            comp_score_delta = round(scen_comp_score - base_comp_score, 2)
-
-            b_cost = float(prev_params.get("approx_cost_for_two", 800.0))
-            s_cost = float(cost)
-            cost_delta = round(s_cost - b_cost, 2)
-
-            # Explanations using opportunity.py formula
-            if perf_score_delta == 0 and comp_score_delta == 0:
-                perf_explanation = f"Performance score remained identical at {base_perf_score:.2f}."
-                comp_explanation = f"Competition score remained identical at {base_comp_score:.2f}."
-                overall_reason = f"Both performance and competition components are identical to baseline. Opportunity Score remains at {base_score:.2f}."
-            elif comp_score_delta == 0:
-                dir_str = "decrease" if perf_score_delta < 0 else "increase"
-                perf_explanation = f"Performance score shifted from {base_perf_score:.2f} to {scen_perf_score:.2f} ({perf_score_delta:+.2f} pts)."
-                comp_explanation = f"Competition score remained unchanged at {base_comp_score:.2f}."
-                overall_reason = f"The competition component remained unchanged ({base_comp_score:.2f}). The {dir_str} in Opportunity Score (from {base_score:.2f} to {scen_score:.2f}) came entirely from the performance component."
-            elif perf_score_delta == 0:
-                dir_str = "decrease" if comp_score_delta > 0 else "increase"
-                perf_explanation = f"Performance score remained unchanged at {base_perf_score:.2f}."
-                comp_explanation = f"Competition score shifted from {base_comp_score:.2f} to {scen_comp_score:.2f} ({comp_score_delta:+.2f} pts)."
-                overall_reason = f"The performance component remained unchanged ({base_perf_score:.2f}). The Opportunity Score shifted from {base_score:.2f} to {scen_score:.2f} due to changes in competition intensity."
-            else:
-                perf_explanation = f"Performance score shifted from {base_perf_score:.2f} to {scen_perf_score:.2f} ({perf_score_delta:+.2f} pts)."
-                comp_explanation = f"Competition score shifted from {base_comp_score:.2f} to {scen_comp_score:.2f} ({comp_score_delta:+.2f} pts)."
-                overall_reason = f"Both performance ({base_perf_score:.2f} → {scen_perf_score:.2f}) and competition ({base_comp_score:.2f} → {scen_comp_score:.2f}) components contributed to the Opportunity Score shift ({base_score:.2f} → {scen_score:.2f})."
-
-            summary_notes = []
-            if score_delta > 0:
-                summary_notes.append(f"Opportunity score improved by +{score_delta} points ({base_score} → {scen_score}).")
-            elif score_delta < 0:
-                summary_notes.append(f"Opportunity score decreased by {score_delta} points ({base_score} → {scen_score}).")
-            else:
-                summary_notes.append(f"Opportunity score remained constant at {base_score}.")
-
-            if prob_delta != 0:
-                sign = "+" if prob_delta > 0 else ""
-                summary_notes.append(f"High-performance probability shifted by {sign}{prob_delta}% points.")
-
-            # Model parameter driver shifts (derived directly from input deltas and probabilities)
-            model_driver_changes = []
-            for cf in changed_fields:
-                field_name = cf.get("field", "") if isinstance(cf, dict) else str(cf)
-                disp_name = cf.get("display_name", field_name.replace("_", " ").title()) if isinstance(cf, dict) else field_name.replace("_", " ").title()
-                b_val = prev_params.get(field_name, "N/A")
-                s_val = params.get(field_name, "N/A")
-                model_driver_changes.append({
-                    "field": field_name,
-                    "display_name": disp_name,
-                    "baseline_value": str(b_val),
-                    "scenario_value": str(s_val),
-                    "direction": "positive" if prob_delta > 0 else ("negative" if prob_delta < 0 else "neutral")
-                })
-
-            prob_explanation_dict = {
-                "baseline_high_probability": base_high_prob,
-                "scenario_high_probability": scen_high_prob,
-                "delta_pct": prob_delta,
-                "summary": (
-                    f"The model's predicted High-performance probability shifted by {prob_delta:+0.1f}% points "
-                    f"({base_high_prob}% → {scen_high_prob}%) based on the modified scenario inputs."
-                    if prob_delta != 0 else
-                    f"The model's predicted High-performance probability remained unchanged at {base_high_prob}%."
-                )
-            }
-
-            opportunity_breakdown_dict = {
-                "baseline_performance": base_perf_score,
-                "scenario_performance": scen_perf_score,
-                "performance_delta": perf_score_delta,
-                "baseline_competition": base_comp_score,
-                "scenario_competition": scen_comp_score,
-                "competition_delta": comp_score_delta,
-                "baseline_opportunity": base_score,
-                "scenario_opportunity": scen_score,
-                "opportunity_delta": score_delta,
-                "summary": overall_reason
-            }
-
-            from src.finance.simulator import simulate_financials
-            from src.analysis.what_if import compare_financial_scenarios, describe_financial_changes
-
-            b_fin_params = {
-                "customers_per_day": prev_params.get("customers_per_day", 100.0),
-                "average_order_value": prev_params.get("average_order_value") or (prev_params.get("approx_cost_for_two", 800.0) / 2.0),
-                "rent": prev_params.get("rent", 60000.0),
-                "staff_cost": prev_params.get("staff_cost", 50000.0),
-                "food_cost_percent": prev_params.get("food_cost_percent", 30.0),
-                "utilities": prev_params.get("utilities", 15000.0),
-                "marketing": prev_params.get("marketing", 10000.0),
-                "other_expenses": prev_params.get("other_expenses", 5000.0),
-                "working_days": prev_params.get("working_days", 30.0),
-            }
-
-            s_fin_params = {
-                "customers_per_day": params.get("customers_per_day", b_fin_params["customers_per_day"]),
-                "average_order_value": params.get("average_order_value") or (params.get("approx_cost_for_two", 800.0) / 2.0),
-                "rent": params.get("rent", b_fin_params["rent"]),
-                "staff_cost": params.get("staff_cost", b_fin_params["staff_cost"]),
-                "food_cost_percent": params.get("food_cost_percent", b_fin_params["food_cost_percent"]),
-                "utilities": params.get("utilities", b_fin_params["utilities"]),
-                "marketing": params.get("marketing", b_fin_params["marketing"]),
-                "other_expenses": params.get("other_expenses", b_fin_params["other_expenses"]),
-                "working_days": params.get("working_days", b_fin_params["working_days"]),
-            }
-
-            fin_comp = compare_financial_scenarios(b_fin_params, s_fin_params)
-            fin_comp["statements"] = describe_financial_changes(fin_comp)
-
-            scen_fin_res = simulate_financials(**s_fin_params)
-            analysis["financial_result"] = scen_fin_res
-            analysis["financial"] = scen_fin_res
-
-            scenario_comparison_data = {
-                "changed_fields": changed_fields,
-                "baseline": {
-                    "parameters": prev_params,
-                    "analysis": prev_analysis,
-                    "location": prev_params.get("location"),
-                    "cuisine": prev_params.get("primary_cuisine"),
-                    "cost_for_two": b_cost,
-                    "prediction": prev_analysis.get("performance_result", {}).get("prediction", "N/A"),
-                    "probabilities": prev_analysis.get("performance_result", {}).get("probabilities", {}),
-                    "high_probability": base_high_prob,
-                    "opportunity_score": base_score,
-                    "performance_score": base_perf_score,
-                    "competition_score": base_comp_score
-                },
-                "scenario": {
-                    "parameters": params,
-                    "analysis": analysis,
-                    "location": location,
-                    "cuisine": cuisine,
-                    "cost_for_two": cost,
-                    "prediction": perf_res.get("prediction", "N/A"),
-                    "probabilities": prob_dict,
-                    "high_probability": scen_high_prob,
-                    "opportunity_score": scen_score,
-                    "performance_score": scen_perf_score,
-                    "competition_score": scen_comp_score
-                },
-                "comparison": {
-                    "base_score": base_score,
-                    "scenario_score": scen_score,
-                    "score_delta": score_delta,
-                    "base_high_prob": base_high_prob,
-                    "scenario_high_prob": scen_high_prob,
-                    "prob_delta_pct": prob_delta,
-                    "base_prediction": prev_analysis.get("performance_result", {}).get("prediction", "N/A"),
-                    "scenario_prediction": perf_res.get("prediction", "N/A"),
-                    "summary_notes": summary_notes
-                },
-                "deltas": {
-                    "cost": cost_delta,
-                    "high_probability": prob_delta,
-                    "opportunity_score": score_delta,
-                    "performance_score": perf_score_delta,
-                    "competition_score": comp_score_delta
-                },
-                "explanation": {
-                    "performance_change": perf_explanation,
-                    "competition_change": comp_explanation,
-                    "overall_reason": overall_reason
-                },
-                "model_driver_changes": model_driver_changes,
-                "probability_explanation": prob_explanation_dict,
-                "opportunity_breakdown": opportunity_breakdown_dict,
-                "financial_comparison": fin_comp
-            }
-
-            cost_str = f"₹{int(cost):,}"
-            score_delta_str = f"+{score_delta}" if score_delta > 0 else str(score_delta)
-
-            cf_list = changed_fields
-            cf_names = [cf.get("display_name", cf.get("field")) if isinstance(cf, dict) else str(cf) for cf in cf_list]
-            cf_str = ", ".join(cf_names) if cf_names else "parameters"
-
-            ai_message = (
-                f"Sure — I've updated **{cf_str}** while keeping the rest of your baseline concept in **{location}** unchanged.\n\n"
-                f"Recalculated model prediction: **{perf_res['prediction']}** probability of success with an Opportunity Score of **{scen_score}/100** ({score_delta_str} pts vs baseline)."
-            )
-
-            title = f"{cuisine} Restaurant · {location.split(',')[0]}"
-            user_msg_obj = {"role": "user", "content": req.message, "timestamp": datetime.datetime.now().isoformat()}
-            ai_msg_obj = {
-                "role": "assistant",
-                "content": ai_message,
-                "mode": "scenario",
-                "analysis": None,
-                "scenarioComparison": scenario_comparison_data,
-                "parameters": params,
-                "timestamp": datetime.datetime.now().isoformat()
-            }
-            save_chat_turn(
-                db,
-                session_id=session_id,
-                user_message=req.message,
-                ai_message=ai_message,
-                mode="scenario",
-                title=title,
-                parameters=params,
-                scenario_comparison=scenario_comparison_data,
-                user_id=current_user.id,
-            )
-
-            return {
-                "session_id": session_id,
-                "intent": "FOLLOW_UP_SCENARIO",
-                "mode": "scenario",
-                "title": title,
-                "ai_message": ai_message,
-                "parameters": params,
-                "analysis": None,
-                "scenario_comparison": scenario_comparison_data,
-                "timestamp": datetime.datetime.now().isoformat()
-            }
-
-        else:
-            # Full business analysis execution
-            analysis = run_analysis_via_adk(
-                location=location,
-                search_query=search_q,
-                online_order=online_order,
-                book_table=book_table,
-                approx_cost=cost,
-                cost_band=cost_band,
-                primary_cuisine=cuisine,
-                cuisine_count=params.get("cuisine_count", 2),
-                rest_type=rest_type,
-                radius_km=3.0,
-                session_id=session_id,
-            )
-            _orchestration_mode = analysis.pop("_orchestration", "unknown")
-
-            comp_res = analysis.get("competition_result", {})
-            comp_count = len(comp_res.get("competitors", [])) or comp_res.get("competition_summary", {}).get("competitor_count_retrieved", 0)
-            comp_res["competitor_count"] = comp_count
-
-            perf_res = analysis.get("performance_result", {})
-            pred_class = perf_res.get("prediction", "Unknown")
-            pred_prob_raw = (perf_res.get("probabilities") or {}).get(pred_class)
-            if pred_prob_raw is None:
-                for k, v in (perf_res.get("probabilities") or {}).items():
-                    if str(k).lower() == str(pred_class).lower():
-                        pred_prob_raw = v
-                        break
-            pred_prob_str = ""
-            if pred_prob_raw is not None:
-                try:
-                    num = float(pred_prob_raw)
-                    pct = round(num * 100.0 if num <= 1.0 else num, 1)
-                    pred_prob_str = f" ({pct}% class probability)"
-                except (TypeError, ValueError):
-                    pass
-
-            opp_obj = analysis.get("opportunity_result", {}).get("opportunity_score", {})
-            opp_score = opp_obj.get("score", 0)
-            opp_signal = opp_obj.get("signal", "Moderate")
-
-            ai_insights = analysis.get("ai_insights") or {}
-            for insight_key in (
-                "location_insights",
-                "performance_insights",
-                "competition_insights",
-                "opportunity_insights",
-                "financial_insights",
-                "business_recommendations",
-            ):
-                if insight_key in ai_insights and insight_key not in analysis:
-                    analysis[insight_key] = ai_insights[insight_key]
-
-            # Inject backend-generated Business Takeaway into analysis
-            # so the frontend displays and reads the EXACT same text.
-            analysis["business_takeaway"] = build_business_takeaway(
-                location=location,
-                cuisine=cuisine,
-                rest_type=rest_type,
-                analysis=analysis,
-            )
-
-            ai_message = (
-                f"Here is the complete assessment for your **{cuisine}** concept in **{location}** (target cost **₹{int(cost):,} for two**).\n\n"
-                f"The Random Forest model classifies this concept in the **{pred_class}** historical performance tier{pred_prob_str}, "
-                f"with a composite Opportunity Score of **{opp_score}/100 ({opp_signal})** and **{comp_count} nearby competitors**."
-            )
-
-            title = f"{cuisine} Restaurant · {location.split(',')[0]}"
-            save_chat_turn(
-                db,
-                session_id=session_id,
-                user_message=req.message,
-                ai_message=ai_message,
-                mode="full",
-                title=title,
-                parameters=params,
-                analysis=analysis,
-                user_id=current_user.id,
-            )
-
-            return {
-                "session_id": session_id,
-                "intent": intent,
-                "mode": "full",
-                "title": title,
-                "ai_message": ai_message,
-                "parameters": params,
-                "analysis": analysis,
-                "scenario_comparison": None,
-                "timestamp": datetime.datetime.now().isoformat()
-            }
+        return {
+            "session_id": session_id,
+            "intent": intent,
+            "mode": "full",
+            "title": title,
+            "ai_message": ai_message,
+            "parameters": params,
+            "analysis": analysis,
+            "scenario_comparison": None,
+            "timestamp": datetime.datetime.now().isoformat()
+        }
 
     except Exception as e:
         import traceback
@@ -2054,155 +1732,6 @@ def chat_endpoint(
         raise HTTPException(status_code=500, detail=f"Error running business analysis chat: {str(e)}")
     finally:
         db.close()
-
-
-
-@app.post("/api/scenario")
-@limiter.limit("20/minute")
-def create_scenario_endpoint(
-    request: Request,
-    req: ScenarioRequest,
-    current_user: User = Depends(get_current_user),
-):
-    """
-    What-If / Scenario Comparison Endpoint.
-    Compares original baseline parameters against new scenario parameters using backend ML predictor & opportunity agent.
-    Returns side-by-side comparison data and metric deltas.
-    Validates session ownership if session_id is provided.
-    """
-    try:
-        # If session_id provided, verify that the session belongs to the current user
-        if req.session_id:
-            s_check_db = SessionLocal()
-            try:
-                existing_conv = s_check_db.query(Conversation).filter(Conversation.id == req.session_id).first()
-                if existing_conv and existing_conv.user_id != current_user.id:
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Access denied: You cannot run scenarios on another user's conversation.",
-                    )
-            finally:
-                s_check_db.close()
-
-        base_p = req.baseline_params
-        scen_p = req.scenario_params
-
-        # Run baseline analysis
-        base_cost = base_p.get("approx_cost_for_two", 800.0)
-        base_band = derive_cost_band(base_cost)
-        base_loc = base_p.get("location", "Koramangala, Bengaluru")
-        base_cuis = base_p.get("primary_cuisine", "Japanese")
-
-        base_full = run_analysis_via_adk(
-            location=base_loc,
-            search_query=base_p.get("search_query") or f"{base_cuis} restaurant in {base_loc}",
-            online_order=1 if base_p.get("online_order", True) else 0,
-            book_table=1 if base_p.get("book_table", True) else 0,
-            approx_cost=base_cost,
-            cost_band=base_band,
-            primary_cuisine=base_cuis,
-            cuisine_count=base_p.get("cuisine_count", 2),
-            rest_type=base_p.get("restaurant_type", "Casual Dining")
-        )
-        base_full.pop("_orchestration", None)
-
-        # Run scenario analysis
-        scen_cost = scen_p.get("approx_cost_for_two", 800.0)
-        scen_band = derive_cost_band(scen_cost)
-        scen_loc = scen_p.get("location", base_loc)
-        scen_cuis = scen_p.get("primary_cuisine", base_cuis)
-
-        scen_full = run_analysis_via_adk(
-            location=scen_loc,
-            search_query=scen_p.get("search_query") or f"{scen_cuis} restaurant in {scen_loc}",
-            online_order=1 if scen_p.get("online_order", True) else 0,
-            book_table=1 if scen_p.get("book_table", True) else 0,
-            approx_cost=scen_cost,
-            cost_band=scen_band,
-            primary_cuisine=scen_cuis,
-            cuisine_count=scen_p.get("cuisine_count", 2),
-            rest_type=scen_p.get("restaurant_type", "Casual Dining")
-        )
-        scen_full.pop("_orchestration", None)
-
-        # Extract score & probability deltas
-        base_score = base_full["opportunity_result"]["opportunity_score"]["score"]
-        scen_score = scen_full["opportunity_result"]["opportunity_score"]["score"]
-        score_diff = round(scen_score - base_score, 1)
-
-        base_high_prob = base_full.get("performance_result", {}).get("probabilities", {}).get("High", 0.0)
-        scen_high_prob = scen_full.get("performance_result", {}).get("probabilities", {}).get("High", 0.0)
-        prob_diff = round((scen_high_prob - base_high_prob) * 100, 1)
-
-        summary_bullets = []
-        if score_diff > 0:
-            summary_bullets.append(f"Opportunity score increased by +{score_diff} points ({base_score} → {scen_score}).")
-        elif score_diff < 0:
-            summary_bullets.append(f"Opportunity score decreased by {score_diff} points ({base_score} → {scen_score}).")
-        else:
-            summary_bullets.append(f"Opportunity score remains constant at {base_score}.")
-
-        if prob_diff > 0:
-            summary_bullets.append(f"High-performance ML probability improved by +{prob_diff}% points.")
-        elif prob_diff < 0:
-            summary_bullets.append(f"High-performance ML probability decreased by {prob_diff}% points.")
-
-        if base_cost != scen_cost:
-            cost_diff = scen_cost - base_cost
-            sign = "+" if cost_diff > 0 else ""
-            summary_bullets.append(f"Cost for two adjusted by {sign}₹{int(cost_diff)} (₹{int(base_cost)} → ₹{int(scen_cost)}).")
-
-        scenario_comparison_data = {
-            "status": "success",
-            "baseline": {
-                "parameters": base_p,
-                "analysis": base_full
-            },
-            "scenario": {
-                "parameters": scen_p,
-                "analysis": scen_full
-            },
-            "comparison": {
-                "base_score": base_score,
-                "scenario_score": scen_score,
-                "score_delta": score_diff,
-                "base_high_prob": round(base_high_prob * 100, 1),
-                "scenario_high_prob": round(scen_high_prob * 100, 1),
-                "prob_delta_pct": prob_diff,
-                "base_prediction": base_full.get("performance_result", {}).get("prediction", "Unknown"),
-                "scenario_prediction": scen_full.get("performance_result", {}).get("prediction", "Unknown"),
-                "summary_notes": summary_bullets
-            }
-        }
-
-        # If session_id provided, persist scenario comparison to MySQL conversations & messages scoped to current_user
-        if req.session_id:
-            s_db = SessionLocal()
-            try:
-                save_chat_turn(
-                    s_db,
-                    session_id=req.session_id,
-                    user_message=f"What-If Scenario: {scen_loc} ({scen_cuis}) - Cost ₹{int(scen_cost)}",
-                    ai_message=f"**Scenario Comparison Executed:** Comparing original baseline against updated inputs for **{scen_loc}**.",
-                    mode="scenario",
-                    parameters=scen_p,
-                    analysis=scen_full,
-                    scenario_comparison=scenario_comparison_data,
-                    user_id=current_user.id,
-                )
-            except Exception as pe:
-                print(f"[Scenario Persistence Warning] Could not save scenario: {pe}")
-            finally:
-                s_db.close()
-
-        return scenario_comparison_data
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Error executing scenario comparison: {str(e)}")
 
 
 @app.post("/api/financial/simulate")

@@ -74,7 +74,7 @@ Base = declarative_base()
 class User(Base):
     """
     Stores authenticated user accounts for BizAdvisor.
-    Each user owns their personal conversation history and What-If scenarios.
+    Each user owns their personal conversation history and market evaluations.
     """
     __tablename__ = "users"
 
