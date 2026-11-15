@@ -12,8 +12,8 @@ export default function ChatInput({
   const textareaRef = useRef(null);
 
   const suggestedFollowups = [
-    'What if I reduce the price to ₹1200?',
-    'What if I switch to Cafe?',
+    'Adjust price to ₹1200',
+    'Switch type to Cafe',
     'Show nearby competitors',
     'Explain the opportunity score breakdown',
   ];
@@ -94,7 +94,7 @@ export default function ChatInput({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Describe your restaurant idea, location, cuisine, budget — or ask a What-If question..."
+            placeholder="Describe your restaurant idea, location, cuisine, target budget..."
             disabled={isLoading}
             className="w-full bg-white dark:bg-[#1A1917] border border-[#C9BFAE] dark:border-[#3A352E] rounded-xl pl-4 pr-12 py-3 text-sm text-[#111111] dark:text-[#F3EEE3] placeholder-[#6B665E] dark:placeholder-[#8C857B] focus:outline-none focus:border-[#D9541E] focus:ring-1 focus:ring-[#D9541E] resize-none shadow-2xs transition-colors"
           />

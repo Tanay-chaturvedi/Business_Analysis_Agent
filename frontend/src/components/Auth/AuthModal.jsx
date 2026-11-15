@@ -56,7 +56,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           <p className="text-xs text-[#6B665E] dark:text-[#A69E92] mt-1">
             {isRegister
               ? 'Register to save and manage your market evaluations securely.'
-              : 'Access your saved restaurant feasibility analyses and scenarios.'}
+              : 'Access your saved restaurant feasibility analyses.'}
           </p>
         </div>
 

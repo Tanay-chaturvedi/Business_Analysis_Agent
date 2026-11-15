@@ -1,8 +1,8 @@
 import React from 'react';
-import { Target, Award, ShieldAlert, SlidersHorizontal } from 'lucide-react';
+import { Target, Award, ShieldAlert } from 'lucide-react';
 import AIInsightsPanel from './AIInsightsPanel';
 
-export default function OpportunityCard({ opportunityData, onCreateScenario, insights }) {
+export default function OpportunityCard({ opportunityData, insights }) {
   if (!opportunityData) return null;
 
   const {
@@ -67,15 +67,6 @@ export default function OpportunityCard({ opportunityData, onCreateScenario, ins
             </h3>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={onCreateScenario}
-          className="flex items-center gap-1.5 py-1.5 px-3 rounded-lg editorial-btn-primary text-xs font-semibold cursor-pointer"
-        >
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          <span>Create Scenario</span>
-        </button>
       </div>
 
       {/* Gauge & Pillar Summary */}

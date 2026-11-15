@@ -5,7 +5,6 @@ import PerformanceCard from '../Analysis/PerformanceCard';
 import CompetitionCard from '../Analysis/CompetitionCard';
 import OpportunityCard from '../Analysis/OpportunityCard';
 import FinancialCard from '../Analysis/FinancialCard';
-import ScenarioCard from '../Analysis/ScenarioCard';
 import WhatThisMeansCard from '../Analysis/WhatThisMeansCard';
 
 function CopyButton({ text, dark = false, className = '' }) {
@@ -105,9 +104,9 @@ function RenderFormattedContent({ content }) {
   );
 }
 
-export default function ChatMessage({ message, onOpenMapModal, onCreateScenario }) {
+export default function ChatMessage({ message, onOpenMapModal }) {
   const isUser = message.role === 'user';
-  const mode = message.mode || (message.scenarioComparison ? 'scenario' : message.analysis ? 'full' : 'casual');
+  const mode = message.mode || (message.analysis ? 'full' : 'casual');
   const analysis = message.analysis;
 
   // Support both nested ai_insights and top-level insight fields cleanly
@@ -151,10 +150,6 @@ export default function ChatMessage({ message, onOpenMapModal, onCreateScenario 
             </div>
           )}
 
-          {mode === 'scenario' && message.scenarioComparison && (
-            <ScenarioCard scenarioData={message.scenarioComparison} />
-          )}
-
           {mode === 'full' && analysis && (
             <div className="space-y-5">
               {/* 1. Location Analysis */}
@@ -186,7 +181,6 @@ export default function ChatMessage({ message, onOpenMapModal, onCreateScenario 
               {analysis.opportunity_result && (
                 <OpportunityCard
                   opportunityData={analysis.opportunity_result}
-                  onCreateScenario={onCreateScenario}
                   insights={insightsRoot.opportunity_insights || analysis.opportunity_insights}
                 />
               )}
@@ -195,7 +189,6 @@ export default function ChatMessage({ message, onOpenMapModal, onCreateScenario 
               {(analysis.financial || analysis.financial_result) && (
                 <FinancialCard
                   financialData={analysis.financial || analysis.financial_result}
-                  onCreateScenario={onCreateScenario}
                   insights={insightsRoot.financial_insights || analysis.financial_insights}
                 />
               )}

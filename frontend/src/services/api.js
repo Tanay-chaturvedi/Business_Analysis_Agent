@@ -160,29 +160,6 @@ export async function runDirectAnalysis(params) {
   return await response.json();
 }
 
-export async function compareScenario(baselineParams, scenarioParams, sessionId = null) {
-  const response = await fetch(`${API_BASE_URL}/scenario`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({
-      baseline_params: baselineParams,
-      scenario_params: scenarioParams,
-      session_id: sessionId,
-    }),
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      clearAuth();
-      window.dispatchEvent(new CustomEvent('bizadvisor:auth_expired'));
-    }
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'Failed to compare scenario');
-  }
-
-  return await response.json();
-}
-
 export async function getHistory(searchQuery = '') {
   const url = searchQuery
     ? `${API_BASE_URL}/history?search=${encodeURIComponent(searchQuery)}`

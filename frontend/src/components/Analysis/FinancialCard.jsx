@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { DollarSign, Calculator, PieChart, SlidersHorizontal, RefreshCw, AlertTriangle, Info, ArrowUpRight } from 'lucide-react';
+import { DollarSign, Calculator, PieChart, SlidersHorizontal, RefreshCw, AlertTriangle, Info } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import AIInsightsPanel from './AIInsightsPanel';
 
@@ -91,7 +91,7 @@ function calculateFinancialMetrics(assump) {
   };
 }
 
-export default function FinancialCard({ financialData, onCreateScenario, insights }) {
+export default function FinancialCard({ financialData, insights }) {
   const rawAssumptions = financialData?.assumptions || {};
   const baseline = useMemo(() => ({
     customers_per_day: financialData?.customers_per_day ?? rawAssumptions.customers_per_day ?? 100,
@@ -207,16 +207,6 @@ export default function FinancialCard({ financialData, onCreateScenario, insight
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span>{showEditor ? 'Hide Assumptions' : 'Edit Assumptions'}</span>
           </button>
-          {onCreateScenario && (
-            <button
-              type="button"
-              onClick={onCreateScenario}
-              className="text-xs font-semibold flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#D9541E]/40 text-[#D9541E] hover:bg-[#D9541E]/10 transition-colors cursor-pointer"
-            >
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Scenario</span>
-            </button>
-          )}
         </div>
       </div>
 

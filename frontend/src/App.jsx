@@ -6,12 +6,10 @@ import AnalysisProgress from './components/Chat/AnalysisProgress';
 import ChatMessage from './components/Chat/ChatMessage';
 import ChatInput from './components/Chat/ChatInput';
 import CompetitorModal from './components/Map/CompetitorModal';
-import ScenarioModal from './components/Scenario/ScenarioModal';
 import LocationPicker from './components/Location/LocationPicker';
 import AuthModal from './components/Auth/AuthModal';
 import {
   sendChatMessage,
-  compareScenario,
   getHistory,
   getHistoryDetail,
   deleteHistoryItem,
@@ -47,7 +45,6 @@ export default function App() {
 
   // Modal States
   const [mapModal, setMapModal] = useState({ isOpen: false, competitors: [], locationName: '' });
-  const [scenarioModal, setScenarioModal] = useState({ isOpen: false, currentParams: null, isLoading: false });
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
 
@@ -218,18 +215,6 @@ export default function App() {
       lower.includes('what is random forest')
     ) {
       mode = 'casual';
-    } else if (
-      (currentSessionId || messages.length > 0) &&
-      (
-        lower.includes('what if') ||
-        lower.includes('reduce') ||
-        lower.includes('increase') ||
-        lower.includes('how about') ||
-        lower.includes('switch') ||
-        lower.includes('change')
-      )
-    ) {
-      mode = 'scenario';
     }
     setProgressMode(mode);
 
@@ -265,7 +250,7 @@ export default function App() {
       }
 
       // Append assistant message with rich analysis cards depending on response mode
-      const respMode = response.mode || (response.scenario_comparison || response.scenarioComparison ? 'scenario' : response.analysis ? 'full' : 'casual');
+      const respMode = response.mode || (response.analysis ? 'full' : 'casual');
 
       const assistantMsg = {
         id: (Date.now() + 1).toString(),
@@ -273,7 +258,6 @@ export default function App() {
         content: response.ai_message,
         mode: respMode,
         analysis: respMode === 'full' ? response.analysis : null,
-        scenarioComparison: respMode === 'scenario' ? (response.scenario_comparison || response.scenarioComparison) : null,
         parameters: response.parameters,
         timestamp: response.timestamp || new Date().toISOString(),
       };
@@ -291,46 +275,6 @@ export default function App() {
       setIsLoading(false);
       setProgressStep(0);
     }
-  };
-
-  // Scenario modal submission
-  const handleSubmitScenario = async (baselineParams, scenarioParams) => {
-    try {
-      setScenarioModal((prev) => ({ ...prev, isLoading: true }));
-      setErrorMessage(null);
-
-      // Call backend scenario comparison API with active sessionId
-      const result = await compareScenario(baselineParams, scenarioParams, currentSessionId);
-
-      setScenarioModal({ isOpen: false, currentParams: null, isLoading: false });
-      fetchHistoryList();
-
-
-      // Append scenario result message to conversation
-      const scenarioMsg = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: `**Scenario Comparison Executed:** Comparing original baseline against updated inputs for **${scenarioParams.location}**.`,
-        scenarioComparison: result,
-        timestamp: new Date().toISOString(),
-      };
-
-      setMessages((prev) => [...prev, scenarioMsg]);
-    } catch (err) {
-      setErrorMessage(err.message || 'Failed to compare scenario with backend');
-    } finally {
-      setScenarioModal((prev) => ({ ...prev, isLoading: false }));
-    }
-  };
-
-  // Get current active parameters from latest assistant message
-  const getLatestAssistantParams = () => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === 'assistant' && messages[i].parameters) {
-        return messages[i].parameters;
-      }
-    }
-    return null;
   };
 
   return (
@@ -395,13 +339,6 @@ export default function App() {
                       locationName: compData?.location || 'Target Area',
                     })
                   }
-                  onCreateScenario={() =>
-                    setScenarioModal({
-                      isOpen: true,
-                      currentParams: getLatestAssistantParams(),
-                      isLoading: false,
-                    })
-                  }
                 />
               ))}
 
@@ -429,15 +366,6 @@ export default function App() {
         onClose={() => setMapModal((prev) => ({ ...prev, isOpen: false }))}
         competitors={mapModal.competitors}
         locationName={mapModal.locationName}
-      />
-
-      {/* Scenario What-If Creator Modal */}
-      <ScenarioModal
-        isOpen={scenarioModal.isOpen}
-        onClose={() => setScenarioModal((prev) => ({ ...prev, isOpen: false }))}
-        currentParams={scenarioModal.currentParams}
-        onSubmitScenario={handleSubmitScenario}
-        isLoading={scenarioModal.isLoading}
       />
 
       {/* Historical Location Picker Modal */}

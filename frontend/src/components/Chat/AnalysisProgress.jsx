@@ -1,24 +1,7 @@
 import React from 'react';
-import { CheckCircle2, Loader2, Circle, Compass, SlidersHorizontal } from 'lucide-react';
+import { CheckCircle2, Loader2, Circle, Compass } from 'lucide-react';
 
 export default function AnalysisProgress({ currentStepIndex = 0, mode = 'full' }) {
-  if (mode === 'scenario') {
-    return (
-      <div className="editorial-panel p-4 rounded-xl max-w-xl my-4 flex items-center gap-3 border-l-2 border-l-[#D9541E]">
-        <Loader2 className="w-5 h-5 text-[#D9541E] animate-spin shrink-0" />
-        <div>
-          <div className="text-xs font-bold text-[#111111] dark:text-[#F3EEE3] flex items-center gap-1.5">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-[#D9541E]" />
-            <span>Evaluating What-If Scenario</span>
-          </div>
-          <div className="text-[11px] text-[#6B665E] dark:text-[#A69E92] font-medium mt-0.5">
-            Recalculating ML prediction, opportunity score, and financial deltas...
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (mode === 'casual') {
     return (
       <div className="editorial-panel px-4 py-3 rounded-xl max-w-xs my-3 flex items-center gap-2.5">
