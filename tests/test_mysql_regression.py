@@ -211,6 +211,70 @@ def test_api_chat_lifecycle_with_stale_and_new_sessions():
         db.close()
 
 
+def test_boolean_extraction_and_chat_accumulation():
+    """Verify boolean extraction (online_order & book_table) and multi-turn parameter accumulation in /api/chat."""
+    from server import extract_boolean_parameters, extract_business_parameters, validate_accumulated_parameters
+
+    # 1. Direct unit checks on variations of punctuation, separators, and capitalization
+    cases = [
+        ("Online ordering — No\nTable booking — Yes", False, True),
+        ("Online ordering — Yes\nTable booking — No", True, False),
+        ("Online ordering — Yes\nTable booking — Yes", True, True),
+        ("Online ordering — No\nTable booking — No", False, False),
+        ("Online ordering - No, Table booking - Yes", False, True),
+        ("Online ordering: No\nTable booking: Yes", False, True),
+        ("• Online ordering — No\n• Table booking — Yes", False, True),
+        ("no online ordering, yes table booking", False, True),
+        ("delivery: false, reservation: true", False, True),
+    ]
+    for msg, exp_on, exp_bk in cases:
+        on, bk = extract_boolean_parameters(msg)
+        assert on == exp_on and bk == exp_bk, f"extract_boolean_parameters failed on {msg!r}: got ({on}, {bk})"
+        p = extract_business_parameters(msg)
+        assert p["online_order"] == exp_on and p["book_table"] == exp_bk, f"extract_business_parameters failed on {msg!r}"
+
+    # 2. Multi-turn chat accumulation test with /api/chat
+    test_user = f"bool_reg_{uuid.uuid4().hex[:8]}"
+    reg_res = client.post("/api/auth/register", json={
+        "username": test_user,
+        "email": f"{test_user}@example.com",
+        "password": "Password123"
+    })
+    assert reg_res.status_code == 200
+    token = reg_res.json()["access_token"]
+    auth_headers = {"Authorization": f"Bearer {token}"}
+
+    # Turn 1: Provide 4 required parameters (missing online_order & book_table)
+    turn1_res = client.post("/api/chat", headers=auth_headers, json={
+        "message": "I want to open a casual dining North Indian restaurant in Koramangala. Approx cost for two is 1200."
+    })
+    assert turn1_res.status_code == 200
+    t1_data = turn1_res.json()
+    assert t1_data["status"] == "needs_input"
+    session_id = t1_data["session_id"]
+    assert "has_online_order" in t1_data["missing_inputs"]
+    assert "has_table_booking" in t1_data["missing_inputs"]
+
+    # Turn 2: User provides the exact screenshot input ("Online ordering — No\nTable booking — Yes")
+    turn2_res = client.post("/api/chat", headers=auth_headers, json={
+        "message": "Online ordering — No\nTable booking — Yes",
+        "session_id": session_id
+    })
+    assert turn2_res.status_code == 200
+    t2_data = turn2_res.json()
+    assert t2_data["mode"] == "full"
+    assert t2_data["parameters"]["online_order"] is False
+    assert t2_data["parameters"]["book_table"] is True
+    assert t2_data["analysis"] is not None
+
+    # Clean up
+    db = SessionLocal()
+    try:
+        delete_conversation(db, session_id)
+    finally:
+        db.close()
+
+
 if __name__ == "__main__":
     print("Running MySQL conversation history regression tests...")
     test_new_chat_commits_conversation_before_messages()
@@ -221,4 +285,6 @@ if __name__ == "__main__":
     print("[PASS] StaleDataError reproduction and recovery verified")
     test_api_chat_lifecycle_with_stale_and_new_sessions()
     print("[PASS] /api/chat lifecycle (new, existing, stale/deleted IDs) verified")
+    test_boolean_extraction_and_chat_accumulation()
+    print("[PASS] Boolean extraction and multi-turn chat accumulation verified")
     print("\nALL REGRESSION TESTS PASSED SUCCESSFULLY!")

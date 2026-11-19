@@ -9,6 +9,7 @@ delegate all domain calculations to existing backend modules in src/.
 """
 
 import os
+import re
 import json
 import uuid
 import datetime
@@ -297,6 +298,62 @@ def normalize_location(loc_val: Optional[str]) -> Optional[str]:
     return loc_clean.title()
 
 
+def extract_boolean_parameters(user_message: str) -> Tuple[Optional[bool], Optional[bool]]:
+    """
+    Robustly extract online_order and book_table boolean values from natural language text.
+    Handles any separator (em-dash —, en-dash –, hyphen -, colon :, equals =, spaces, newlines, bullets)
+    and natural phrasing (yes/no, true/false, enable/disable, with/without, etc.).
+    """
+    import re
+    msg_lower = (user_message or "").lower().strip()
+    if not msg_lower:
+        return None, None
+
+    # Normalise dashes and bullet symbols
+    norm_msg = re.sub(r'[\u2014\u2013\u2212]', '-', msg_lower)  # em-dash, en-dash, minus to hyphen
+    norm_msg = re.sub(r'[•\*\t]', ' ', norm_msg)
+
+    online_order = None
+    book_table = None
+
+    yes_val = r'(?:yes|yep|yeah|true|available|enabled|y|1)'
+    no_val = r'(?:no|nope|nah|false|disabled|none|not\s*available|n|0)'
+
+    # 1. ONLINE ORDERING
+    # Pattern A: key -> value (e.g. "online ordering - no", "online: yes", "delivery = false", "online_order: no")
+    m_on = re.search(
+        rf'(?:online(?:\s*|_)?order(?:ing)?|online(?:\s*|_)?delivery|online|delivery|swiggy|zomato)\s*(?:[:=\-]|is)?\s*({yes_val}|{no_val})\b',
+        norm_msg
+    )
+    if m_on:
+        val = m_on.group(1).lower()
+        online_order = bool(re.match(f'^{yes_val}$', val))
+    else:
+        # Pattern B: value -> key (e.g. "no online ordering", "yes to delivery", "without delivery")
+        if re.search(r'\b(no|without|disable|disabled|zero|not)\s+(?:to\s+|for\s+)?(?:online(?:\s*|_)?order(?:ing)?|online(?:\s*|_)?delivery|delivery)\b', norm_msg):
+            online_order = False
+        elif re.search(r'\b(yes|with|enable|enabled)\s+(?:to\s+|for\s+)?(?:online(?:\s*|_)?order(?:ing)?|online(?:\s*|_)?delivery|delivery)\b', norm_msg):
+            online_order = True
+
+    # 2. TABLE BOOKING
+    # Pattern A: key -> value (e.g. "table booking - yes", "book table: no", "table: yes", "reservation: true")
+    m_bk = re.search(
+        rf'(?:table(?:\s*|_)?booking|book(?:\s*|_)?table|table(?:\s*|_)?reservation|reservation|reservations|book_table|table)\s*(?:[:=\-]|is)?\s*({yes_val}|{no_val})\b',
+        norm_msg
+    )
+    if m_bk:
+        val = m_bk.group(1).lower()
+        book_table = bool(re.match(f'^{yes_val}$', val))
+    else:
+        # Pattern B: value -> key (e.g. "no table booking", "yes to reservation", "without booking")
+        if re.search(r'\b(no|without|disable|disabled|zero|not)\s+(?:to\s+|for\s+)?(?:table(?:\s*|_)?booking|book(?:\s*|_)?table|reservation|reservations|table)\b', norm_msg):
+            book_table = False
+        elif re.search(r'\b(yes|with|enable|enabled)\s+(?:to\s+|for\s+)?(?:table(?:\s*|_)?booking|book(?:\s*|_)?table|reservation|reservations|table)\b', norm_msg):
+            book_table = True
+
+    return online_order, book_table
+
+
 def extract_business_parameters(user_message: str) -> dict:
     """
     Extract structured business analysis parameters from user natural language prompt.
@@ -432,19 +489,8 @@ def extract_business_parameters(user_message: str) -> dict:
                 except ValueError:
                     pass
 
-    # 5. Online Ordering
-    online_order = None
-    if any(p in msg_lower for p in ["online order yes", "online ordering yes", "online yes", "delivery yes", "swiggy yes", "zomato yes", "online: yes", "online order = yes", "online_order: yes", "online = yes", "online ordering: yes", "online ordering = yes"]):
-        online_order = True
-    elif any(p in msg_lower for p in ["online order no", "online ordering no", "online no", "no online order", "no online ordering", "no delivery", "online: no", "online order = no", "online_order: no", "online = no", "online ordering: no", "online ordering = no"]):
-        online_order = False
-
-    # 6. Table Booking
-    book_table = None
-    if any(p in msg_lower for p in ["table booking yes", "book table yes", "table yes", "reservation yes", "table booking = yes", "table booking: yes", "table: yes", "book_table: yes", "table = yes", "table booking true"]):
-        book_table = True
-    elif any(p in msg_lower for p in ["table booking no", "book table no", "table no", "no table booking", "no book table", "no reservation", "table booking = no", "table booking: no", "table: no", "book_table: no", "table = no", "table booking false"]):
-        book_table = False
+    # 5. Online Ordering & 6. Table Booking
+    online_order, book_table = extract_boolean_parameters(user_message)
 
     return {
         "location": location,
@@ -1003,35 +1049,34 @@ def isolate_scenario_parameters(
                 "pct_change": None
             })
 
-    # 4. ONLINE ORDER FIELD
-    if any(w in msg_lower for w in ["online order", "online delivery", "delivery", "swiggy", "zomato"]):
+    # 4. ONLINE ORDER & 5. TABLE BOOKING FIELDS
+    scen_online, scen_booking = extract_boolean_parameters(user_message)
+
+    if scen_online is not None:
         old_val = prev_params.get("online_order", True)
-        new_val = False if ("no " in msg_lower or "disable" in msg_lower or "stop" in msg_lower or "without" in msg_lower) else True
-        if new_val != old_val:
-            scenario_params["online_order"] = new_val
+        if scen_online != old_val:
+            scenario_params["online_order"] = scen_online
             changed_field_keys.append("online_order")
             rich_changed_fields.append({
                 "field": "online_order",
                 "display_name": "Online Ordering",
                 "old_value": "Yes" if old_val else "No",
-                "new_value": "Yes" if new_val else "No",
+                "new_value": "Yes" if scen_online else "No",
                 "unit": None,
                 "delta": None,
                 "pct_change": None
             })
 
-    # 5. TABLE BOOKING FIELD
-    if any(w in msg_lower for w in ["table booking", "book table", "reservation"]):
+    if scen_booking is not None:
         old_val = prev_params.get("book_table", False)
-        new_val = False if ("no " in msg_lower or "disable" in msg_lower or "stop" in msg_lower or "without" in msg_lower) else True
-        if new_val != old_val:
-            scenario_params["book_table"] = new_val
+        if scen_booking != old_val:
+            scenario_params["book_table"] = scen_booking
             changed_field_keys.append("book_table")
             rich_changed_fields.append({
                 "field": "book_table",
                 "display_name": "Table Booking",
                 "old_value": "Yes" if old_val else "No",
-                "new_value": "Yes" if new_val else "No",
+                "new_value": "Yes" if scen_booking else "No",
                 "unit": None,
                 "delta": None,
                 "pct_change": None
@@ -1571,18 +1616,38 @@ def chat_endpoint(
             "rest_type_ambiguous": extracted_p.get("rest_type_ambiguous", False),
         }
 
-        # Standalone short-answer parsing (e.g. user answered "Yes" / "Table booking yes" to previous missing inputs prompt)
+        # Standalone short-answer parsing (e.g. user answered "Yes" / "No, Yes" to previous missing inputs prompt)
         msg_lower_clean = req.message.lower().strip(" .!?")
         if prev_params:
             prev_val = validate_accumulated_parameters(prev_params)
             missing_bools = [f for f in ["has_online_order", "has_table_booking"] if f in prev_val["missing_inputs"]]
-            if len(missing_bools) == 1:
+
+            # Case 1: Both booleans were missing and user provided pair/compound response
+            if len(missing_bools) == 2:
+                if any(w in msg_lower_clean for w in ["both yes", "yes to both", "yes both"]):
+                    accumulated_params["online_order"] = True
+                    accumulated_params["book_table"] = True
+                elif any(w in msg_lower_clean for w in ["both no", "no to both", "no both"]):
+                    accumulated_params["online_order"] = False
+                    accumulated_params["book_table"] = False
+                else:
+                    parts = re.split(r'[,/\n&]|(?:\s+and\s+)', msg_lower_clean)
+                    if len(parts) == 2:
+                        p1, p2 = parts[0].strip(), parts[1].strip()
+                        yes_tokens = {"yes", "yeah", "yep", "true", "1", "y"}
+                        no_tokens = {"no", "nah", "nope", "false", "0", "n"}
+                        if (p1 in yes_tokens or p1 in no_tokens) and (p2 in yes_tokens or p2 in no_tokens):
+                            accumulated_params["online_order"] = p1 in yes_tokens
+                            accumulated_params["book_table"] = p2 in yes_tokens
+
+            # Case 2: Only 1 boolean was missing
+            elif len(missing_bools) == 1:
                 target_f = missing_bools[0]
                 key = "online_order" if target_f == "has_online_order" else "book_table"
                 if accumulated_params.get(key) is None:
-                    if msg_lower_clean in ("yes", "yeah", "yep", "true", "1") or "yes" in msg_lower_clean.split():
+                    if msg_lower_clean in ("yes", "yeah", "yep", "true", "1", "y") or "yes" in msg_lower_clean.split():
                         accumulated_params[key] = True
-                    elif msg_lower_clean in ("no", "nah", "nope", "false", "0") or "no" in msg_lower_clean.split():
+                    elif msg_lower_clean in ("no", "nah", "nope", "false", "0", "n") or "no" in msg_lower_clean.split():
                         accumulated_params[key] = False
 
         # Validate accumulated parameters
