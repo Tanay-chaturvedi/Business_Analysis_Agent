@@ -1,22 +1,13 @@
-"""
-insights_generator.py - Structured LLM Business Insights Generator
-
-Generates concise, data-grounded business insights across six sections
-using one structured LLM call with secondary LLM and deterministic fallbacks.
-"""
-
 import json
 import logging
 import re
+from typing import Any, Dict
 import litellm
 
 from src.agent.llm_config import (
     PRIMARY_MODEL_NAME,
     PRIMARY_LLM_API_KEY,
     PRIMARY_LLM_BASE_URL,
-    SECONDARY_MODEL_NAME,
-    SECONDARY_LLM_API_KEY,
-    SECONDARY_LLM_BASE_URL,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,208 +22,170 @@ SECTIONS = [
 ]
 
 
-def _extract_summary(context: dict, analysis: dict) -> dict:
-    """Extract and format verified analytical results into a simple summary dictionary."""
-    loc = analysis.get("location_result") or {}
-    perf = analysis.get("performance_result") or {}
-    comp = analysis.get("competition_result") or {}
-    comp_sum = comp.get("competition_summary") or {}
-    opp = analysis.get("opportunity_result") or {}
-    fin = analysis.get("financial_result") or analysis.get("financial") or {}
-
-    pred_class = perf.get("prediction", "Unknown")
-    probs = perf.get("probabilities") or {}
-    raw_prob = probs.get(pred_class, 0.0)
+def _safe_float(val: Any, default: float = 0.0) -> float:
+    """Safely convert a value to float."""
     try:
-        prob_val = float(raw_prob)
-        prob_pct = round(prob_val * 100 if prob_val <= 1.0 else prob_val, 1)
+        return float(val) if val is not None else default
     except (TypeError, ValueError):
-        prob_pct = 0.0
+        return default
 
+
+def _safe_int(val: Any, default: int = 0) -> int:
+    """Safely convert a value to int."""
+    try:
+        return int(float(val)) if val is not None else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _empty_insights(source: str = "unavailable") -> dict:
+    """Return an empty insight structure compatible with the frontend."""
     return {
-        "location": context.get("location") or loc.get("location", "Bengaluru"),
-        "cuisine": context.get("primary_cuisine", "Dining"),
-        "rest_type": context.get("primary_rest_type", "Restaurant"),
-        "cost_for_two": float(context.get("approx_cost_for_two") or context.get("approx_costfor_two_people") or 800),
-        "loc_found": bool(loc.get("found", False)),
-        "hist_restaurants": int(loc.get("historical_restaurant_count") or 0),
-        "loc_median_cost": float(loc.get("location_median_cost") or 0),
-        "online_order_pct": round(float(loc.get("location_online_order_rate") or 0) * 100, 1),
-        "book_table_pct": round(float(loc.get("location_book_table_rate") or 0) * 100, 1),
-        "pred_class": pred_class,
-        "pred_prob_pct": prob_pct,
-        "competitor_count": int(comp_sum.get("competitor_count_retrieved") or comp.get("competitor_count") or 0),
-        "avg_rating": round(float(comp_sum.get("avg_competitor_rating") or 0), 2),
-        "opp_score": round(float((opp.get("opportunity_score") or {}).get("score") or 0), 1),
-        "opp_category": (opp.get("opportunity_score") or {}).get("signal", "Moderate"),
-        "revenue": round(float(fin.get("monthly_revenue") or 0)),
-        "profit": round(float(fin.get("estimated_operating_profit") or 0)),
-        "margin": round(float(fin.get("operating_profit_margin") or 0), 1),
-        "break_even": int(fin.get("break_even_target_customers_per_day") or fin.get("break_even_customers_per_day") or 0),
-        "customers_per_day": int(fin.get("customers_per_day") or 100),
+        "location_insights": [],
+        "performance_insights": [],
+        "competition_insights": [],
+        "opportunity_insights": [],
+        "financial_insights": [],
+        "business_recommendations": [],
+        "_insights_source": source,
     }
 
 
-def _get_fallback_insights(d: dict) -> dict:
-    """Generate deterministic, data-grounded insights when LLMs are unavailable."""
-    # 1. Location
-    if d["loc_found"]:
-        loc = [
-            f"{d['location']} has {d['hist_restaurants']} historical restaurants recorded with a median cost of ₹{int(d['loc_median_cost']):,} for two.",
-            f"Online ordering adoption is {d['online_order_pct']}%, while table reservations stand at {d['book_table_pct']}%.",
-            f"Your proposed cost of ₹{int(d['cost_for_two']):,} aligns with local dining demand.",
-        ]
-    else:
-        loc = [
-            f"No historical Zomato benchmark records were found for {d['location']}.",
-            "Local footfall and demand should be verified on-site before finalizing lease terms.",
-            "Rely on live competitor density and nearby foot traffic to guide your price point.",
-        ]
+def _extract_summary(context: dict, analysis: dict) -> dict:
+    """Extract and normalize metrics for the LLM prompt."""
+    loc = analysis.get("location_result") or {}
+    perf = analysis.get("performance_result") or {}
+    comp = (analysis.get("competition_result") or {}).get("competition_summary") or {}
+    opp = analysis.get("opportunity_result") or {}
+    fin = analysis.get("financial_result") or analysis.get("financial") or {}
 
-    # 2. Performance
-    perf = [
-        f"The Random Forest model predicts a {d['pred_class']} performance tier with a {d['pred_prob_pct']}% predicted-class probability.",
-        "This probability reflects similarity to historical peer tiers, not overall model accuracy or guaranteed revenue.",
-        "Execution, food quality, and service consistency will drive real-world financial results.",
-    ]
+    pred = str(perf.get("prediction") or "Unknown")
+    probs = perf.get("probabilities") or {}
+    prob_val = _safe_float(probs.get(pred, 0.0))
+    prob_pct = round(prob_val * 100 if prob_val <= 1.0 else prob_val, 1)
 
-    # 3. Competition
-    comp = [
-        f"Identified {d['competitor_count']} nearby competitors with an average Google rating of {d['avg_rating']} stars.",
-        "Local incumbents have established strong customer followings in this immediate area.",
-        "Focus on signature menu items and fast order fulfillment to differentiate from nearby options.",
-    ]
-
-    # 4. Opportunity
-    opp = [
-        f"The composite Opportunity Score is {d['opp_score']}/100, placing the concept in the {d['opp_category']} opportunity tier.",
-        "This score combines historical performance signals (60% weight) with local competition headwinds (40% weight).",
-        "Targeting an underserved micro-niche or strong delivery presence will help maximize market capture.",
-    ]
-
-    # 5. Financial
-    profit_text = f"profit of ₹{d['profit']:,}" if d['profit'] >= 0 else f"loss of ₹{abs(d['profit']):,}"
-    fin = [
-        f"Estimated monthly revenue is ₹{d['revenue']:,} with an estimated operating {profit_text} ({d['margin']}% margin) at {d['customers_per_day']} daily covers.",
-        f"The estimated break-even target is {d['break_even']} customers per day to cover all fixed and variable expenses.",
-        "All figures are directional estimates based on operating assumptions and exclude taxes and aggregator commissions.",
-    ]
-
-    # 6. Recommendations
-    rec = [
-        f"Opportunity: Capitalize on {d['cuisine']} demand in {d['location']} with pricing matching local spending.",
-        f"Risk: High competitor density ({d['competitor_count']} outlets) leaves little margin for operational inconsistency.",
-        "Next Step: Validate physical footfall at peak hours and stress-test assumptions using unit economics.",
-    ]
+    location = str(context.get("location") or loc.get("location") or "the target area").strip()
 
     return {
-        "location_insights": loc,
-        "performance_insights": perf,
-        "competition_insights": comp,
-        "opportunity_insights": opp,
-        "financial_insights": fin,
-        "business_recommendations": rec,
+        "location": location,
+        "cuisine": str(context.get("primary_cuisine") or "Dining").strip(),
+        "rest_type": str(context.get("primary_rest_type") or "Restaurant").strip(),
+        "cost_for_two": _safe_int(context.get("approx_cost_for_two") or 800),
+        "hist_restaurants": _safe_int(loc.get("historical_restaurant_count")),
+        "loc_median_cost": _safe_int(loc.get("location_median_cost")),
+        "online_order_pct": round(_safe_float(loc.get("location_online_order_rate")) * 100, 1),
+        "book_table_pct": round(_safe_float(loc.get("location_book_table_rate")) * 100, 1),
+        "pred_class": pred,
+        "pred_prob_pct": prob_pct,
+        "competitor_count": _safe_int(comp.get("competitor_count_retrieved")),
+        "avg_rating": round(_safe_float(comp.get("avg_competitor_rating")), 2),
+        "opp_score": round(_safe_float((opp.get("opportunity_score") or {}).get("score")), 1),
+        "opp_category": str((opp.get("opportunity_score") or {}).get("signal") or "Moderate"),
+        "revenue": _safe_int(fin.get("monthly_revenue")),
+        "profit": _safe_int(fin.get("estimated_operating_profit")),
+        "margin": round(_safe_float(fin.get("operating_profit_margin")), 1),
+        "break_even": _safe_int(fin.get("break_even_target_customers_per_day") or fin.get("break_even_customers_per_day")),
     }
 
 
 def _build_prompt(d: dict) -> str:
-    """Build a concise, structured prompt containing all verified numbers."""
-    return f"""You are a restaurant business advisor for Bengaluru.
-Analyze this verified data and generate 2 to 3 concise, insightful bullet points for each of the 6 sections.
+    """Build a concise, structured prompt containing verified analysis data."""
+    loc = d["location"]
+    return f"""You are a restaurant business advisor for {loc}.
+Analyze this verified data and generate concise, insightful bullet points for each section.
 
 DATA:
-- Concept: {d['cuisine']} ({d['rest_type']}) in {d['location']} at ₹{int(d['cost_for_two'])} for two
-- Location: {d['hist_restaurants']} historical restaurants, median cost ₹{int(d['loc_median_cost'])}, {d['online_order_pct']}% online ordering, {d['book_table_pct']}% table booking (Found: {d['loc_found']})
-- ML Performance: Class "{d['pred_class']}" with {d['pred_prob_pct']}% predicted-class probability (do NOT call this model accuracy; never mention SHAP)
+- Concept: {d['cuisine']} ({d['rest_type']}) in {loc} at ₹{d['cost_for_two']} for two
+- Location: {d['hist_restaurants']} restaurants, median cost ₹{d['loc_median_cost']}, {d['online_order_pct']}% online ordering, {d['book_table_pct']}% booking
+- ML Prediction: Class "{d['pred_class']}" ({d['pred_prob_pct']}% probability)
 - Competition: {d['competitor_count']} competitors nearby with {d['avg_rating']} average rating
 - Opportunity Score: {d['opp_score']}/100 ({d['opp_category']} tier)
-- Financial: ₹{d['revenue']:,} monthly revenue, ₹{d['profit']:,} operating profit ({d['margin']}% margin), break-even at {d['break_even']} customers/day
+- Financials: ₹{d['revenue']:,} revenue, ₹{d['profit']:,} operating profit ({d['margin']}% margin), break-even at {d['break_even']} covers/day
 
-Return ONLY a JSON object with these exact 6 keys, each containing an array of 2-3 short bullet strings:
+Return ONLY a JSON object with these exact keys:
 {{
-  "location_insights": ["..."],
-  "performance_insights": ["..."],
-  "competition_insights": ["..."],
-  "opportunity_insights": ["..."],
-  "financial_insights": ["..."],
-  "business_recommendations": ["..."]
-}}
-"""
+  "location_insights": ["...", "..."],
+  "performance_insights": ["...", "..."],
+  "competition_insights": ["...", "..."],
+  "opportunity_insights": ["...", "..."],
+  "financial_insights": ["...", "..."],
+  "business_recommendations": [
+    "Key Insight: <opportunity>",
+    "Key Risk: <primary risk>",
+    "Recommendation: <actionable next step>"
+  ]
+}}"""
 
 
-def _parse_llm_json(raw_text: str) -> dict:
-    """Parse JSON from the LLM output, handling markdown code fences or surrounding text."""
-    text = (raw_text or "").strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
-        text = re.sub(r"\s*```$", "", text).strip()
+def _parse_json(text: str) -> dict:
+    """Parse JSON from the LLM output, handling markdown fences or substring JSON."""
+    clean = (text or "").strip()
+    if clean.startswith("```"):
+        clean = re.sub(r"^```(?:json)?\s*", "", clean, flags=re.IGNORECASE)
+        clean = re.sub(r"\s*```$", "", clean).strip()
     try:
-        return json.loads(text)
+        return json.loads(clean)
     except Exception:
-        start = text.find("{")
-        end = text.rfind("}")
+        start = clean.find("{")
+        end = clean.rfind("}")
         if start != -1 and end > start:
-            return json.loads(text[start : end + 1])
+            return json.loads(clean[start : end + 1])
         raise
-
-
-def _call_llm(model: str, key: str | None, base_url: str | None, prompt: str, max_tokens: int) -> dict:
-    """Invoke LiteLLM and parse JSON response."""
-    kwargs = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.3,
-        "max_tokens": max_tokens,
-    }
-    if key:
-        kwargs["api_key"] = key
-    if base_url:
-        kwargs["api_base"] = base_url
-    if "gpt-oss" in model.lower():
-        kwargs["reasoning_effort"] = "low"
-
-    response = litellm.completion(**kwargs)
-    raw = response.choices[0].message.content or ""
-    return _parse_llm_json(raw)
 
 
 def generate_business_insights(context: dict, analysis: dict) -> dict:
     """
-    Generate section-wise business insights across all 6 sections using ONE structured LLM call,
-    with automatic secondary LLM fallback and deterministic Python fallback.
+    Generate structured business insights using one Primary LLM call.
+    If the LLM fails, returns an empty insight structure safely.
     """
-    summary = _extract_summary(context, analysis)
-    fallback = _get_fallback_insights(summary)
-    prompt = _build_prompt(summary)
+    if not PRIMARY_LLM_API_KEY:
+        logger.warning("Primary LLM API key not configured. Skipping insights generation.")
+        return _empty_insights("missing_api_key")
 
-    parsed = None
-    source = "deterministic_fallback"
+    try:
+        summary = _extract_summary(context or {}, analysis or {})
+        prompt = _build_prompt(summary)
 
-    # 1. Primary LLM attempt
-    if PRIMARY_LLM_API_KEY:
-        try:
-            parsed = _call_llm(PRIMARY_MODEL_NAME, PRIMARY_LLM_API_KEY, PRIMARY_LLM_BASE_URL, prompt, max_tokens=3000)
-            source = "llm_primary"
-        except Exception as e:
-            logger.warning("Primary LLM (%s) failed: %s", PRIMARY_MODEL_NAME, e)
+        kwargs: Dict[str, Any] = {
+            "model": PRIMARY_MODEL_NAME,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.3,
+            "max_tokens": 2500,
+            "api_key": PRIMARY_LLM_API_KEY,
+        }
+        if PRIMARY_LLM_BASE_URL:
+            kwargs["api_base"] = PRIMARY_LLM_BASE_URL
+        if "gpt-oss" in PRIMARY_MODEL_NAME.lower():
+            kwargs["reasoning_effort"] = "low"
 
-    # 2. Secondary LLM fallback
-    if parsed is None and (SECONDARY_LLM_API_KEY or PRIMARY_LLM_API_KEY):
-        try:
-            sec_key = SECONDARY_LLM_API_KEY or PRIMARY_LLM_API_KEY
-            parsed = _call_llm(SECONDARY_MODEL_NAME, sec_key, SECONDARY_LLM_BASE_URL, prompt, max_tokens=900)
-            source = "llm_secondary"
-        except Exception as e:
-            logger.warning("Secondary LLM (%s) failed: %s", SECONDARY_MODEL_NAME, e)
+        response = litellm.completion(**kwargs)
+        raw_text = response.choices[0].message.content or ""
+        parsed = _parse_json(raw_text)
 
-    # 3. Assemble final result ensuring 2-3 clean bullets per section
-    result = {"_insights_source": source}
-    for key in SECTIONS:
-        bullets = parsed.get(key) if isinstance(parsed, dict) else None
-        if isinstance(bullets, list) and len(bullets) >= 2:
-            cleaned = [re.sub(r"^[-*•]\s*", "", str(b)).strip() for b in bullets if str(b).strip()]
-            result[key] = cleaned[:3] if len(cleaned) >= 2 else fallback[key]
-        else:
-            result[key] = fallback[key]
+        if not isinstance(parsed, dict):
+            logger.warning("Primary LLM returned non-dictionary JSON.")
+            return _empty_insights("invalid_llm_output")
 
-    return result
+        result = {"_insights_source": "llm_primary"}
+        for key in SECTIONS:
+            items = parsed.get(key)
+            if isinstance(items, list):
+                cleaned = [re.sub(r"^[-*•]\s*", "", str(x)).strip() for x in items if str(x).strip()]
+                result[key] = cleaned[:3]
+            else:
+                result[key] = []
+
+        # Ensure business_recommendations has Key Insight, Key Risk, Recommendation labels
+        recs = result["business_recommendations"]
+        if len(recs) >= 3:
+            labels = ["Key Insight", "Key Risk", "Recommendation"]
+            result["business_recommendations"] = [
+                f"{label}: {item}" if not re.match(r"^(key insight|insight|key risk|risk|recommendation|next step)\s*:", item, re.IGNORECASE) else item
+                for label, item in zip(labels, recs[:3])
+            ]
+
+        return result
+
+    except Exception as e:
+        logger.warning("Primary LLM (%s) insight generation failed: %s", PRIMARY_MODEL_NAME, e)
+        return _empty_insights("error")
