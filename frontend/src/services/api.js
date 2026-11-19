@@ -54,6 +54,36 @@ function getAuthHeaders() {
   return headers;
 }
 
+export function extractErrorMessage(errorData, fallback = 'An unexpected error occurred.') {
+  if (!errorData) return fallback;
+  const detail = errorData.detail ?? errorData.message;
+  if (!detail) return fallback;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => {
+        if (!item) return '';
+        if (typeof item === 'string') return item;
+        if (typeof item === 'object') {
+          const field = Array.isArray(item.loc) && item.loc.length > 1 ? item.loc[item.loc.length - 1] : null;
+          const msg = item.msg || item.message;
+          if (field && msg) {
+            const fieldName = String(field).charAt(0).toUpperCase() + String(field).slice(1);
+            return `${fieldName}: ${msg}`;
+          }
+          return msg || JSON.stringify(item);
+        }
+        return String(item);
+      })
+      .filter(Boolean);
+    return messages.length > 0 ? messages.join('. ') : fallback;
+  }
+  if (typeof detail === 'object') {
+    return detail.msg || detail.message || JSON.stringify(detail);
+  }
+  return String(detail) || fallback;
+}
+
 // -----------------------------------------------------------------------------
 // Authentication Endpoints
 // -----------------------------------------------------------------------------
@@ -69,7 +99,7 @@ export async function loginUser(usernameOrEmail, password) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'Login failed. Please check your credentials.');
+    throw new Error(extractErrorMessage(errorData, 'Login failed. Please check your credentials.'));
   }
 
   const data = await response.json();
@@ -91,7 +121,7 @@ export async function registerUser(username, email, password) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'Registration failed. Please check your input.');
+    throw new Error(extractErrorMessage(errorData, 'Registration failed. Please check your input.'));
   }
 
   const data = await response.json();
@@ -135,7 +165,7 @@ export async function sendChatMessage(message, sessionId = null, parametersOverr
       window.dispatchEvent(new CustomEvent('bizadvisor:auth_expired'));
     }
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'Failed to analyze request with backend AI');
+    throw new Error(extractErrorMessage(errorData, 'Failed to analyze request with backend AI'));
   }
 
   return await response.json();
@@ -154,7 +184,7 @@ export async function runDirectAnalysis(params) {
       window.dispatchEvent(new CustomEvent('bizadvisor:auth_expired'));
     }
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'Failed to execute business analysis');
+    throw new Error(extractErrorMessage(errorData, 'Failed to execute business analysis'));
   }
 
   return await response.json();

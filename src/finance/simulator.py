@@ -1,45 +1,3 @@
-"""
-Financial Simulator — Phase 3
-==============================
-
-A deterministic, assumption-based financial simulator for restaurant
-and food-service businesses.
-
-PURPOSE
--------
-Helps a business owner produce a quick first-pass estimate of:
-
-    - Monthly Revenue
-    - Food / Variable Cost
-    - Fixed Monthly Operating Costs
-    - Total Monthly Operating Expenses
-    - Estimated Operating Profit
-    - Operating Profit Margin
-    - Break-even Customers Per Day
-
-This is NOT a machine-learning prediction.
-Gemini / LLM is NOT used for any calculation here.
-
-IMPORTANT LIMITATIONS
----------------------
-The result is labelled "Estimated Operating Profit", NOT "Net Profit".
-
-This simulator does NOT currently model:
-    - Income tax or GST
-    - Loan interest or EMI payments
-    - Depreciation of equipment / furniture
-    - Payment gateway charges
-    - Delivery platform commissions (Zomato, Swiggy, etc.)
-    - Inventory wastage / shrinkage
-    - Maintenance and repair costs
-    - Owner drawings or owner salary
-
-All inputs are assumed to be in INR.
-No currency symbol is embedded in the returned numbers.
-
-Use this output only as a directional planning estimate.
-"""
-
 from __future__ import annotations
 import math
 from typing import Optional
@@ -97,9 +55,7 @@ def simulate_financials(
     if variable_cost_percent is not None:
         food_cost_percent = variable_cost_percent
 
-    # ------------------------------------------------------------------
     # Normalise inputs to float
-    # ------------------------------------------------------------------
     customers_per_day = float(customers_per_day)
     average_order_value = float(average_order_value)
     rent = float(rent)
@@ -110,9 +66,7 @@ def simulate_financials(
     other_expenses = float(other_expenses)
     working_days = float(working_days)
 
-    # ------------------------------------------------------------------
     # Input Validation
-    # ------------------------------------------------------------------
     if customers_per_day < 0:
         raise ValueError(
             f"customers_per_day must be >= 0, got {customers_per_day}."
@@ -140,59 +94,33 @@ def simulate_financials(
             f"working_days must be between 1 and 31, got {working_days}."
         )
 
-    # ------------------------------------------------------------------
     # A) Monthly Customers
-    # ------------------------------------------------------------------
     monthly_customers = customers_per_day * working_days
 
-    # ------------------------------------------------------------------
     # B) Monthly Revenue
-    #    Monthly Revenue = Daily Customers × Operating Days × Average Spend
-    # ------------------------------------------------------------------
     monthly_revenue = monthly_customers * average_order_value
 
-    # ------------------------------------------------------------------
     # C) Variable / Food Cost
-    #    Variable Costs = Monthly Revenue × Variable Cost Percentage
-    # ------------------------------------------------------------------
     variable_cost_ratio = food_cost_percent / 100.0
     food_cost = monthly_revenue * variable_cost_ratio
 
-    # ------------------------------------------------------------------
     # D) Fixed Monthly Operating Costs
-    #    Fixed Costs = Rent + Staff Costs + Utilities + Marketing + Other Fixed Costs
-    # ------------------------------------------------------------------
     fixed_costs = rent + staff_cost + utilities + marketing + other_expenses
 
-    # ------------------------------------------------------------------
+    
     # E) Total Monthly Operating Expenses
-    #    Total Operating Expenses = Variable Costs + Fixed Costs
-    # ------------------------------------------------------------------
     monthly_expenses = fixed_costs + food_cost
 
-    # ------------------------------------------------------------------
     # F) Estimated Operating Profit
-    #    Operating Profit = Monthly Revenue − Total Operating Expenses
-    # ------------------------------------------------------------------
     estimated_operating_profit = monthly_revenue - monthly_expenses
 
-    # ------------------------------------------------------------------
     # G) Operating Profit Margin
-    #    Operating Margin (%) = Operating Profit / Monthly Revenue × 100
-    #    Safely handles zero revenue (returns 0.0)
-    # ------------------------------------------------------------------
     if monthly_revenue > 0:
         operating_profit_margin = (estimated_operating_profit / monthly_revenue) * 100.0
     else:
         operating_profit_margin = 0.0
 
-    # ------------------------------------------------------------------
     # H) Contribution Margin & Break-even Calculations
-    #    Contribution Margin Ratio = 1 − Variable Cost Percentage
-    #    Break-Even Revenue = Fixed Operating Costs / Contribution Margin Ratio
-    #    Break-Even Customers per Month = Fixed Operating Costs / (Avg Spend × Contribution Margin Ratio)
-    #    Break-Even Customers per Day = Break-Even Customers per Month / Operating Days
-    # ------------------------------------------------------------------
     contribution_margin_ratio = 1.0 - variable_cost_ratio
 
     if contribution_margin_ratio <= 0.0:
@@ -236,10 +164,6 @@ def simulate_financials(
                 f"({round(break_even_customers_per_day, 1)} exact) to cover all fixed and variable operating costs."
             )
 
-    # ------------------------------------------------------------------
-    # Canonical Output Mapping
-    # All monetary numbers rounded to 2 decimals; margins/break-even to 4 decimals
-    # ------------------------------------------------------------------
     return {
         "monthly_customers": int(round(monthly_customers)),
         "monthly_revenue": round(monthly_revenue, 2),

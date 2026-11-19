@@ -19,18 +19,33 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
 
     try {
       if (isRegister) {
+        const cleanUser = username.trim();
+        if (cleanUser.length < 3 || cleanUser.length > 30) {
+          throw new Error('Username must be 3-30 characters long.');
+        }
         if (password.length < 8) {
           throw new Error('Password must be at least 8 characters long.');
         }
-        const data = await registerUser(username, email, password);
+        if (!/[A-Z]/.test(password)) {
+          throw new Error('Password must contain at least one uppercase letter.');
+        }
+        if (!/[a-z]/.test(password)) {
+          throw new Error('Password must contain at least one lowercase letter.');
+        }
+        if (!/\d/.test(password)) {
+          throw new Error('Password must contain at least one number.');
+        }
+        const data = await registerUser(cleanUser, email.trim(), password);
         onAuthSuccess(data.user);
       } else {
-        const data = await loginUser(username || email, password);
+        const cleanLogin = (username || email).trim();
+        const data = await loginUser(cleanLogin, password);
         onAuthSuccess(data.user);
       }
       onClose();
     } catch (err) {
-      setError(err.message || 'Authentication failed');
+      const msg = typeof err?.message === 'string' ? err.message : 'Authentication failed';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -63,7 +78,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-[#A63222]/10 border border-[#A63222]/30 flex items-start gap-2.5 text-xs text-[#A63222] dark:text-[#E06C5B]">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span>{error}</span>
+            <span>{typeof error === 'string' ? error : (error?.message || JSON.stringify(error))}</span>
           </div>
         )}
 

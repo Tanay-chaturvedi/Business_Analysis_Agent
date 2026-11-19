@@ -1,25 +1,3 @@
-"""
-adk_runner.py — Genuine Google ADK Runtime Integration
-
-This module executes the coordinator_agent through the genuine
-google.adk Runner + InMemorySessionService runtime loop.
-
-When Gemini is reachable:
-    - Runner.run_async() is used to drive the coordinator_agent.
-    - The coordinator_agent calls run_full_business_analysis as a tool.
-    - Tool call results are extracted from ADK Event objects.
-    - The structured analysis dict is returned to server.py.
-
-When Gemini returns a 403/404 (API unavailable):
-    - Falls back to run_full_business_analysis() direct Python call.
-    - The same structured result dict is returned.
-    - The fallback is logged clearly so it is never hidden.
-
-IMPORTANT: All domain calculations (ML, Google Places, opportunity)
-remain in the existing src/ modules. The ADK runner only orchestrates the
-agent loop — it does NOT replace or alter any calculation logic.
-"""
-
 import asyncio
 import uuid
 import logging
@@ -40,8 +18,6 @@ logger = logging.getLogger(__name__)
 
 # ADK Application name (required by InMemorySessionService)
 _ADK_APP_NAME = "bizadvisor"
-
-
 
 # Helper: extract the run_full_business_analysis result from ADK events
 
@@ -223,7 +199,7 @@ def run_analysis_via_adk(
 
     _session_id = session_id or str(uuid.uuid4())
 
-    # ── Attempt 1: genuine ADK runtime ────────────────────────────────────────
+    #  Attempt 1: genuine ADK runtime 
     try:
         result = asyncio.run(
             _run_via_adk_async(
@@ -270,7 +246,7 @@ def run_analysis_via_adk(
             logger.exception("[ADK Fallback] Unexpected ADK error: %s", adk_error)
             print(f"[ADK Fallback] ADK error: {adk_error!r} — running deterministic Python pipeline.")
 
-    # ── Fallback: direct Python pipeline ──────────────────────────────────────
+    #  Fallback: direct Python pipeline 
     result = run_full_business_analysis(
         location=location,
         search_query=search_query,
