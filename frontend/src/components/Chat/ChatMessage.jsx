@@ -6,6 +6,7 @@ import CompetitionCard from '../Analysis/CompetitionCard';
 import OpportunityCard from '../Analysis/OpportunityCard';
 import FinancialCard from '../Analysis/FinancialCard';
 import WhatThisMeansCard from '../Analysis/WhatThisMeansCard';
+import JudgeCard from '../Analysis/JudgeCard';
 
 function CopyButton({ text, dark = false, className = '' }) {
   const [copied, setCopied] = useState(false);
@@ -198,6 +199,11 @@ export default function ChatMessage({ message, onOpenMapModal }) {
                 analysis={analysis}
                 recommendations={insightsRoot.business_recommendations || analysis.business_recommendations}
               />
+
+              {/* 7. Judge Agent — Final Business Verdict */}
+              {analysis.judge_result && analysis.judge_result.verdict !== 'unavailable' && (
+                <JudgeCard judgeData={analysis.judge_result} />
+              )}
             </div>
           )}
         </div>

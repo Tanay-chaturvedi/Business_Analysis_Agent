@@ -19,6 +19,7 @@ from src.agent.opportunity_agent import (
     opportunity_analysis_tool,
 )
 from src.agent.insights_generator import generate_business_insights
+from src.agent.judge_agent import generate_judge_verdict
 from src.finance.simulator import simulate_financials
 
 
@@ -219,6 +220,20 @@ def run_full_business_analysis(
     analysis_payload["ai_insights"] = ai_insights
 
     notify("insights", "completed", "AI insights generated")
+
+    # 7. Final Judge Verdict
+    # Pass only the permitted specialist analyses — financial simulator output is excluded.
+    notify("judge", "started", "Generating final business verdict...")
+    judge_inputs = {
+        "location_result":    location_result,
+        "performance_result": performance_result,
+        "competition_result": competition_result,
+        "opportunity_result": opportunity_result,
+    }
+    judge_result = generate_judge_verdict(judge_inputs, concept_context)
+    analysis_payload["judge_result"] = judge_result
+    notify("judge", "completed", f"Verdict: {judge_result.get('verdict', 'unavailable')}")
+
     notify("coordinator", "completed", "Full business analysis complete")
 
     return analysis_payload

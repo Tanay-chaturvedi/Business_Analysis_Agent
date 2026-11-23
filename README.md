@@ -1,39 +1,37 @@
-# BizAdvisor: AI-Powered Restaurant Feasibility Platform
+# BizAdvisor: AI-Powered Restaurant Feasibility & Business Advisory Platform
 
-An AI-powered business intelligence and decision-support platform designed to evaluate the commercial feasibility of restaurant ventures in Bengaluru, India.
+BizAdvisor is an AI-powered business intelligence and decision-support platform designed to evaluate the commercial feasibility of restaurant ventures in Bengaluru, India. The system combines machine learning performance prediction, live geospatial competitor analysis via Google Places, deterministic monthly financial modeling, specialist agent orchestration, and LLM-based business evaluation.
 
 **Project:** BizAdvisor  
 **Developer:** Tanay Chaturvedi  
 **Domain:** Artificial Intelligence and Machine Learning  
 
-> BizAdvisor combines machine learning performance prediction, live geospatial competitor discovery via Google Places, deterministic monthly financial modeling, and structured AI-generated business insights into an integrated advisory workflow.
+> BizAdvisor coordinates specialized data and ML agents to assess location demand, classify restaurant viability, evaluate nearby market competition, simulate unit economics, and synthesize a final executive business verdict through an autonomous Judge Agent.
 
 ---
 
 ## 1. Core Capabilities
 
-- **Required Parameter Validation:** Validates that all six essential business parameters (`location`, `primary_cuisine`, `primary_rest_type`, `approx_cost_for_two`, `online_order`, `book_table`) are present before triggering analysis. If inputs are missing, the system requests them rather than guessing.
+- **Required Parameter Validation:** Validates that all six essential business parameters (`location`, `primary_cuisine`, `primary_rest_type`, `approx_costfor_two_people`, `online_order`, `book_table`) are provided before triggering analysis. If parameters are missing, the system interactively requests clarifications instead of guessing.
 - **Machine Learning Performance Prediction:** A Scikit-Learn `RandomForestClassifier` (300 estimators) trained on 33,332 historical Bengaluru restaurant records predicts expected performance tier (`High`, `Medium`, or `Low`) along with class probability distributions.
-- **Live Competitor Discovery:** Converts human-readable Bengaluru localities into geographic coordinates and queries the Google Places API (`places:searchText`) for up to 20 direct competitors within a 3 km radius, calculating average ratings and review counts.
-- **Composite Opportunity Score (0–100):** Combines historical ML performance indicators (60% weight) and local competitive saturation (40% weight) into an opportunity score and risk tier (`Low`, `Moderate`, or `High`).
-- **Deterministic Monthly Financial Modeling:** Calculates monthly revenue, variable food costs, itemized operating expenses (rent, staff, utilities, marketing, other), estimated operating profit, operating profit margin %, and break-even customer targets per day and month.
-- **Three-Tier Resilient AI Insights:** Generates 2–3 structured insight bullets per analysis section using a dual-model LLM failover hierarchy backed by a deterministic Python fallback:
-  1. Primary LLM via LiteLLM (`groq/openai/gpt-oss-120b`)
-  2. Secondary LLM fallback (`groq/qwen/qwen3.8-27b`)
-  3. Deterministic Python rule-based insights (`_get_fallback_insights`)
-- **User Authentication & Session Persistence:** Argon2id password hashing, PyJWT access tokens, rate limiting via SlowAPI, and full conversation/analysis persistence in MySQL with cascading deletes.
-- **Frontend Dashboard:** React 19 single-page application built with Vite and Tailwind CSS v4, featuring analytical cards, Leaflet competitor maps, and Web Speech API audio synthesis.
+- **Live Competitor Discovery:** Converts Bengaluru localities into geographic coordinates and queries the Google Places API (`places:searchText`) for direct competitors within a 3 km radius, calculating competitive density, average ratings, and review counts.
+- **Composite Opportunity Score (0–100):** Combines historical ML performance indicators (60% weight) and local competitive saturation (40% weight) into a normalized opportunity score and risk tier (`Low`, `Moderate`, or `High`).
+- **Independent Monthly Financial Modeling:** Deterministically calculates monthly revenue, variable food costs, itemized operating expenses (rent, staff, utilities, marketing, other), operating profit, profit margin %, and break-even customer targets per day and month.
+- **Judge Agent Business Verdict:** A dedicated evaluator agent powered by the Primary LLM that synthesizes all specialist findings (location, ML prediction, competition, opportunity score) into a structured verdict (`Promising`, `Risky`, or `Not Recommended`), plain-language explanation, separate strengths and risks, and one actionable recommendation.
+- **AI Business Insights:** Generates concise, section-by-section analytical takeaways across location, performance, competition, opportunity, and financials using the Primary LLM.
+- **User Authentication & Session Persistence:** Argon2id password hashing, PyJWT access tokens, rate limiting via SlowAPI, and complete multi-turn conversation and analysis persistence in MySQL with cascading deletes.
+- **Interactive Web Interface:** React 19 single-page application built with Vite and Tailwind CSS v4, featuring analytical scorecards, Leaflet competitor maps, Judge verdict badge, and Web Speech API audio synthesis.
 
 ---
 
-## 2. System Architecture
+## 2. System Architecture & End-to-End Workflow
 
 ```mermaid
 flowchart TD
     User([User / Browser]) <--> ReactApp["React 19 Frontend (Vite + Tailwind CSS v4)"]
     ReactApp <-->|REST + Bearer JWT| FastAPI["FastAPI Backend (server.py)"]
     
-    subgraph Security ["Security and Middleware"]
+    subgraph Security ["Security & Middleware"]
         FastAPI --- RateLimiter["SlowAPI Rate Limiter"]
         FastAPI --- AuthModule["src/auth.py (Argon2id + PyJWT HS256)"]
         FastAPI --- SecHeaders["Security Headers Middleware"]
@@ -46,38 +44,122 @@ flowchart TD
         MySQL --- MsgsTable["messages"]
     end
 
-    subgraph Orchestration ["Agent and Analytics Layer"]
-        FastAPI <-->|ADK Coordinator runner| Coord["Coordinator Agent (Google ADK)"]
+    subgraph Orchestration ["Agent & Analytics Layer"]
+        FastAPI <-->|ADK Runner / Python Pipeline| Coord["Coordinator Agent (Google ADK)"]
         Coord --> LocAgent["Location Agent (location_context.py)"]
         Coord --> PerfAgent["Performance Agent (predictor.py)"]
         Coord --> CompAgent["Competition Agent (competition.py)"]
         Coord --> OppAgent["Opportunity Agent (opportunity.py)"]
         Coord --> FinSim["Financial Simulator (simulator.py)"]
         Coord --> InsightsGen["Insights Generator (insights_generator.py)"]
+        Coord --> JudgeAgent["Judge Agent (judge_agent.py)"]
     end
 
-    subgraph ExternalServices ["External Intelligence and Models"]
+    subgraph ExternalServices ["External Intelligence & Models"]
         LocAgent --- ZomatoData[("Engineered Training Data (CSV)")]
         PerfAgent --- RFModel[("Random Forest Model (.pkl)")]
-        CompAgent <-->|SearchText request and response, 3 km radius| GooglePlaces["Google Places API"]
-        InsightsGen <-->|LiteLLM Gateway| GroqLLM["Groq API (Primary and Secondary)"]
+        CompAgent <-->|SearchText, 3 km radius| GooglePlaces["Google Places API"]
+        InsightsGen <-->|LiteLLM Gateway| PrimaryLLM["Primary LLM (Groq / LiteLLM)"]
+        JudgeAgent <-->|LiteLLM Gateway| PrimaryLLM
     end
 ```
 
-### Specialist Agent Responsibilities
+### End-to-End Workflow Steps:
 
-| Agent / Module | Primary Function | Inputs | Outputs | Responsibility Boundary |
-| :--- | :--- | :--- | :--- | :--- |
-| **Location Agent** | Retrieves historical neighborhood metrics | `location` | Historical restaurant count, median cost, online order rate, table booking rate | Reads historical data from processed Zomato dataset. Does not query live APIs. |
-| **Performance Agent** | Evaluates business inputs using Random Forest | 7 user inputs + 6 historical location metrics | Predicted class (`High`, `Medium`, `Low`) and class probability distribution | Loads preprocessor and model from `models/`. Does not calculate financial profit or guarantee success. |
-| **Competition Agent** | Discovers nearby direct competitors | `location`, `search_query`, radius (3 km), max results (20) | Nearby competitors list, count, average rating, review count | Calls Google Places API (`places:searchText`). Raises error if `GOOGLE_MAPS_API_KEY` is missing. |
-| **Opportunity Agent** | Calculates composite opportunity score | Class probabilities, competition summary | Opportunity score (0–100) and risk signal | Deterministic mathematical calculation. Never alters ML probabilities. |
-| **Financial Simulator** | Models monthly unit economics | Customer volume, average spend, rent, staff, expenses | Monthly revenue, expenses, operating profit, margin %, break-even targets | Deterministic Python calculation. Does not model taxes, loan interest, or delivery commissions. |
-| **Insights Generator** | Produces structured analytical commentary | Business parameters and aggregated analysis results | 2–3 insight bullets for each of the 6 analysis sections | Single structured call. Tries Primary LLM $\rightarrow$ Secondary LLM $\rightarrow$ Deterministic Python fallback. |
+1. **User Input:** User submits restaurant parameters via the React frontend form or chat interface.
+2. **FastAPI Request Handling:** FastAPI (`server.py`) validates authentication and passes parameters to the orchestration layer.
+3. **Coordinator Orchestration:** The Coordinator Agent manages sequential specialist evaluation.
+4. **Location Analysis:** Location Agent retrieves historical neighborhood density, median costs, and delivery/booking adoption.
+5. **Performance Prediction:** Performance Agent runs the Random Forest model to predict class tier and probabilities.
+6. **Competition Discovery:** Competition Agent queries Google Places API for active nearby competitors within 3 km.
+7. **Opportunity Scoring:** Opportunity Agent combines performance and competition signals into a composite score (0–100).
+8. **Independent Financial Simulation:** Financial Simulator calculates unit economics, operating margins, and break-even points.
+9. **Permitted Input Isolation for Judge:** The Coordinator filters the analysis payload to build `judge_inputs` consisting **only** of location, performance, competition, and opportunity results. **Financial Simulator output is strictly excluded from the Judge Agent.**
+10. **Judge Agent Final Verdict:** The Judge Agent calls the Primary LLM to evaluate the combined specialist evidence and returns a structured verdict, explanation, separate strengths and risks, and a concrete recommendation.
+11. **Frontend Presentation:** FastAPI returns the complete analysis payload. The React frontend renders the 6 specialist analytical cards followed by the Judge Verdict Card (`JudgeCard.jsx`).
 
 ---
 
-## 3. Machine Learning & Predictive Analytics
+## 3. Specialist Agent Responsibilities
+
+| Agent / Module | Primary Function | Inputs | Outputs | Responsibility Boundary |
+| :--- | :--- | :--- | :--- | :--- |
+| **Location Agent** | Retrieves historical neighborhood indicators | `location` | Historical restaurant count, median cost, online order rate, table booking rate | Reads historical data from processed Zomato dataset. Does not query live APIs. |
+| **Performance Agent** | Evaluates concept viability using Random Forest | Business parameters + historical location context | Predicted tier (`High`, `Medium`, `Low`) and class probability distribution | Loads preprocessor and model from `models/`. Directional ML prediction only. |
+| **Competition Agent** | Discovers active competitors via Google Places | `location`, `search_query`, radius (3 km), max results (20) | Competitor list, competitor count, average rating, review count | Calls Google Places API (`places:searchText`). Requires `GOOGLE_MAPS_API_KEY`. |
+| **Opportunity Agent** | Computes composite opportunity score | ML class probabilities, competition summary | Opportunity score (0–100) and risk signal (`Low`, `Moderate`, `High`) | Deterministic mathematical calculation combining ML (60%) and competition (40%). |
+| **Financial Simulator** | Models monthly unit economics & break-even | Customers/day, average order value, fixed and variable costs | Revenue, expenses, operating profit, margin %, break-even targets | Independent deterministic model. Does not model taxes, loan interest, or aggregator commissions. |
+| **Insights Generator** | Produces structured analytical takeaways | Analysis results & concept context | 2–3 insight bullets per section | Calls Primary LLM via LiteLLM. Returns empty lists on failure. |
+| **Judge Agent** | Delivers final business assessment & verdict | Permitted specialist results (Location, ML, Competition, Opportunity) | Verdict, plain-language explanation, strengths, risks, recommendation | Powered by Primary LLM. Strictly excludes Financial Simulator data. No Python fallback verdict. |
+
+---
+
+## 4. Judge Agent (`src/agent/judge_agent.py`)
+
+The Judge Agent acts as the final decision-support evaluator in BizAdvisor. After specialist agents complete their evaluations, the Judge Agent synthesizes their combined findings and delivers an authoritative, easy-to-understand verdict for restaurant owners.
+
+### Key Characteristics:
+- **Location in Codebase:** [`src/agent/judge_agent.py`](file:///src/agent/judge_agent.py)
+- **Primary LLM Powered:** Uses the unified Primary LLM configuration from `src/agent/llm_config.py` via LiteLLM. It does not introduce additional models or providers.
+- **Evaluation Inputs (Permitted Only):**
+  1. Location suitability metrics (historical density, median pricing, delivery/booking patterns).
+  2. Random Forest performance prediction (predicted tier and class confidence).
+  3. Competition level (competitor count, average rating, top-tier competitors).
+  4. Business opportunity score (composite score and tier).
+  5. Major risks and limitations from specialist findings.
+- **Financial Simulator Exclusion (Mandatory):**
+  - **Financial Simulator output is never passed to or evaluated by the Judge Agent.**
+  - Revenue, costs, profit, margins, and break-even targets do not influence the verdict.
+  - The Financial Simulator remains fully operational and displays independently in the application (`FinancialCard.jsx`).
+- **Verdict Categories:**
+  - `Promising`: Encouraging demand indicators and manageable competitive barriers.
+  - `Risky`: Meaningful market friction, saturation, or uncertainties requiring caution.
+  - `Not Recommended`: Substantial barriers indicating high likelihood of operational or market failure.
+- **Structured Output Contract:**
+  ```json
+  {
+    "verdict": "Promising" | "Risky" | "Not Recommended",
+    "explanation": "4-5 concise, natural sentences written for a non-technical restaurant owner.",
+    "strengths": [
+      "Positive factor from specialist analysis",
+      "Encouraging market or location metric"
+    ],
+    "risks": [
+      "Negative factor, weakness, or limitation from specialist analysis",
+      "Competitive barrier or market uncertainty"
+    ],
+    "recommendation": "One practical, concrete action the owner can execute immediately.",
+    "_judge_source": "llm_primary"
+  }
+  ```
+- **Separation of Strengths and Risks:**
+  - Positive factors are strictly placed in `strengths`.
+  - Negative factors, weaknesses, and limitations are strictly placed in `risks`.
+  - The frontend renders both sections side-by-side. If no risks are identified, the UI displays *"No major risks identified from the available analysis"*.
+- **No Python Fallback for Verdict:**
+  - The verdict and explanation are strictly generated by the Primary LLM.
+  - No heuristic or deterministic Python rules substitute for the verdict.
+  - If the Primary LLM fails or the API key is missing, the Judge Agent returns `verdict: "unavailable"` and `_judge_source: "error" | "missing_api_key"`.
+
+---
+
+## 5. Execution & Fallback Architecture
+
+BizAdvisor maintains clear boundaries between agent orchestration failover and LLM output generation:
+
+1. **Coordinator Orchestration Fallback (`src/agent/adk_runner.py`):**
+   - The coordinator agent attempts to execute through the **Google ADK Runner** (`_run_via_adk_async`) using an `InMemorySessionService`.
+   - If the ADK runtime encounters an issue (such as an unhandled session exception or tool unwrapping failure), it automatically falls back to direct deterministic Python execution (`run_full_business_analysis`).
+   - This ensures the multi-agent pipeline completes reliably under all runtime environments.
+
+2. **Judge Agent No-Fallback Principle (`src/agent/judge_agent.py`):**
+   - In contrast to workflow orchestration, the Judge Agent has **no deterministic Python fallback**.
+   - A business verdict must reflect authentic LLM reasoning over specialist data, not synthetic hardcoded rules.
+   - If the Primary LLM call fails, times out, or returns invalid JSON, the response safely returns `verdict: "unavailable"`. The React UI gracefully handles this without breaking.
+
+---
+
+## 6. Machine Learning & Predictive Analytics
 
 - **Model Type:** Scikit-Learn `RandomForestClassifier` with 300 estimators, saved at `models/zomato_performance_model.pkl`.
 - **Feature Preprocessor:** Scikit-Learn `ColumnTransformer` (handling one-hot encoding for categorical variables and standard scaling for numerical features), saved at `models/zomato_preprocessor.pkl`.
@@ -86,14 +168,11 @@ flowchart TD
   - *User Business Inputs:* `online_order`, `book_table`, `approx_costfor_two_people`, `log_cost`, `cost_band`, `location`, `primary_cuisine`, `cuisine_count`, `primary_rest_type`.
   - *Historical Location Context:* `historical_restaurant_count`, `location_median_cost`, `location_online_order_rate`, `location_book_table_rate`, `location_cuisine_diversity`, `location_business_type_diversity`.
 - **Target Variable:** Performance tier (`High`, `Medium`, `Low`), reflecting historical customer engagement and dining ratings.
-- **Probability Output:** Uses `predict_proba()` to compute class probabilities. In the UI, the Model Confidence metric displays the probability of the *predicted class* (e.g., if predicted class is `Medium` with 55.7% probability, Model Confidence displays 55.7%).
-- **Important Note on Calibration:** Probabilities represent raw Random Forest tree voting distributions; they are not formally calibrated using Platt scaling or isotonic regression (`CalibratedClassifierCV`).
+- **Probability Output:** Uses `predict_proba()` to compute class probabilities. In the UI, Model Confidence displays the predicted-class probability percentage.
 
 ---
 
-## 4. Financial Modeling
-
-### Monthly Unit Economics (`src/finance/simulator.py`)
+## 7. Financial Unit Economics Model (`src/finance/simulator.py`)
 
 The financial simulator calculates monthly operational figures using standard managerial accounting:
 
@@ -111,144 +190,72 @@ $$\text{Operating Profit Margin \%} = \left(\frac{\text{Estimated Operating Prof
 
 $$\text{Break-Even Target Customers/Day} = \left\lceil \frac{\text{Fixed Operating Costs}}{(\text{Average Order Value} - \text{Variable Cost Per Customer}) \times \text{Working Days}} \right\rceil$$
 
-**Current Modeling Limitations:**
-- Calculates estimated operating profit (EBITDA proxy); does not calculate net profit after taxes.
-- Does not model GST, income tax, depreciation, loan interest/EMI, or food delivery aggregator commissions (e.g., Swiggy/Zomato fees).
+---
+
+## 8. Technology Stack
+
+Verified active technologies and versions:
+
+- **Frontend:**
+  - React 19 (`react: ^19.0.0`)
+  - Vite (`vite: ^8.3.1`)
+  - Tailwind CSS v4 (`tailwindcss: ^4.0.0`)
+  - Lucide React Icons (`lucide-react: ^1.16.0`)
+  - Leaflet (`leaflet: ^1.9.4`)
+- **Backend & API:**
+  - FastAPI (`fastapi==0.141.1`)
+  - Uvicorn ASGI Server (`uvicorn==0.52.1`)
+  - Pydantic (`pydantic==2.13.4`)
+  - SlowAPI Rate Limiting (`slowapi==0.1.10`)
+- **Security & Persistence:**
+  - Argon2id Password Hashing (`argon2-cffi==25.1.0`)
+  - JWT Authentication (`PyJWT==2.15.1`)
+  - SQLAlchemy (`SQLAlchemy==2.1.4`)
+  - PyMySQL Driver (`PyMySQL==1.2.3`)
+  - MySQL Database (MySQL 8.0+)
+- **Multi-Agent Orchestration & LLMs:**
+  - Google ADK (`google-adk==2.6.3`)
+  - Google GenAI SDK (`google-genai==2.17.0`)
+  - LiteLLM Gateway (`litellm==1.97.0`)
+  - Groq Cloud LLM Inference (`groq>=0.11.0`)
+- **Machine Learning & Data Processing:**
+  - Scikit-Learn (`scikit-learn==1.9.0`)
+  - Joblib Model Serialization (`joblib==1.5.3`)
+  - Pandas (`pandas==3.0.5`)
+  - NumPy (`numpy==2.5.2`)
+- **Geospatial & External APIs:**
+  - Google Places API (New `places:searchText`)
+- **Testing & Quality Assurance:**
+  - Pytest (`pytest==9.1.1`)
+  - HTTPX Test Client (`httpx==0.28.1`)
 
 ---
 
-## 5. AI Insights & Resilient Failover Architecture
+## 9. Environment Variables Reference
 
-BizAdvisor uses a single-call structured insight generation pipeline with a 3-tier safety net to guarantee reliability:
+All runtime variables are configured in `.env` (using `.env.example` as a template):
 
-```mermaid
-flowchart TD
-    Req([Generate Insights]) --> Tier1["Tier 1: Primary LLM\ngroq/openai/gpt-oss-120b"]
-    Tier1 -->|Success| Out1["Return Structured LLM Insights (source: llm_primary)"]
-    
-    Tier1 -->|Rate limit, timeout, or error| Tier2["Tier 2: Secondary LLM\ngroq/qwen/qwen3.8-27b"]
-    Tier2 -->|Success| Out2["Return Structured LLM Insights (source: llm_secondary)"]
-    
-    Tier2 -->|Failure or outage| Tier3["Tier 3: Deterministic Python Fallback\n_get_fallback_insights()"]
-    Tier3 --> Out3["Return Rule-Based Data Insights (source: deterministic_fallback)"]
-```
-
-- **Single Structured Request:** All six analysis sections (`location_insights`, `performance_insights`, `competition_insights`, `opportunity_insights`, `financial_insights`, `business_recommendations`) are generated in a single prompt.
-- **Data Grounding:** The grounding payload provides exact calculated figures (e.g., predicted class, class probabilities, competitor count, average rating, operating margin %, break-even targets) directly to the prompt.
-- **LiteLLM Sanitization:** A completion wrapper in `src/agent/llm_config.py` strips internal reasoning fields (such as `reasoning_content`) emitted by certain models before passing responses downstream.
-
----
-
-## 6. Authentication, Security & Database Schema
-
-### Security Implementation
-
-- **Password Hashing:** Argon2id via `argon2-cffi` configured with `time_cost=2`, `memory_cost=65536` (64 MB), and `parallelism=1`.
-- **Access Tokens:** PyJWT HS256 tokens with configurable expiration (default: 60 minutes) and issuer validation (`iss: "bizadvisor-api"`).
-- **Startup Secret Validation:** Server fails to start if `JWT_SECRET_KEY` is missing, empty, shorter than 32 characters, or matches common insecure placeholders (e.g., `"secret"`, `"changeme"`).
-- **Rate Limiting:** Managed via `SlowAPI` with in-memory limits per IP:
-  - `/api/auth/register` & `/api/auth/login`: 10 requests / minute
-  - `/api/analyze`: 20 requests / minute
-  - `/api/chat`: 30 requests / minute
-  - `/api/financial/simulate`, `/api/history`, `/api/history/{session_id}` (GET): 60 requests / minute
-  - `/api/history/{session_id}` (DELETE): 30 requests / minute
-  - Global default: 120 requests / minute
-- **Security Headers:** Injected via HTTP middleware:
-  - `X-Content-Type-Options: nosniff`
-  - `X-Frame-Options: DENY`
-  - `X-XSS-Protection: 1; mode=block`
-  - `Referrer-Policy: strict-origin-when-cross-origin`
-  - `Permissions-Policy: geolocation=(), microphone=(), camera=()`
-- **User Data Isolation:** All conversation and history queries enforce `user_id == current_user.id` to prevent cross-account data leakage.
-
-### Database Schema (MySQL 8.0+)
-
-```mermaid
-erDiagram
-    USERS ||--o{ CONVERSATIONS : "owns (1:N, ON DELETE CASCADE)"
-    CONVERSATIONS ||--o{ MESSAGES : "contains (1:N, ON DELETE CASCADE)"
-
-    USERS {
-        string id PK "String(64), UUID4"
-        string username UK "String(50), Unique, Indexed"
-        string email UK "String(255), Unique, Indexed"
-        string hashed_password "String(255), Argon2id hash"
-        datetime created_at "UTC DateTime"
-        datetime updated_at "UTC DateTime"
-    }
-
-    CONVERSATIONS {
-        string id PK "String(64), UUID4"
-        string user_id FK "String(64), References users.id"
-        string title "String(255)"
-        json parameters_json "JSON, Business parameters"
-        json analysis_json "JSON, Complete structured analysis"
-        datetime created_at "UTC DateTime"
-        datetime updated_at "UTC DateTime, Indexed"
-        datetime last_message_at "UTC DateTime, Indexed"
-    }
-
-    MESSAGES {
-        string id PK "String(64), UUID4"
-        string conversation_id FK "String(64), References conversations.id"
-        string role "String(20), user or assistant"
-        text content "Text, Message body"
-        string message_type "String(50), message type"
-        json metadata_json "JSON, Stores analysis, parameters, and metadata"
-        datetime created_at "UTC DateTime, Indexed"
-    }
-```
-
----
-
-## 7. API Endpoints Reference
-
-All application endpoints are served by FastAPI (`server.py`):
-
-| Method | Endpoint | Authentication | Rate Limit | Description |
-| :--- | :--- | :---: | :---: | :--- |
-| `POST` | `/api/auth/register` | Public | 10 / min | Register a new user account with username, email, and password. |
-| `POST` | `/api/auth/login` | Public | 10 / min | Authenticate credentials; returns a Bearer JWT access token. |
-| `GET` | `/api/auth/me` | Bearer JWT | 120 / min | Retrieve the authenticated user's profile. |
-| `GET` | `/api/health` | Public | 120 / min | Service health check reporting operational status. |
-| `POST` | `/api/analyze` | Bearer JWT | 20 / min | Run full analysis directly from structured request parameters. |
-| `POST` | `/api/chat` | Bearer JWT | 30 / min | Conversational business analysis endpoint with 6-input validation. |
-| `POST` | `/api/financial/simulate` | Public | 60 / min | Recalculate deterministic unit economics from input assumptions. |
-| `GET` | `/api/history` | Bearer JWT | 60 / min | List conversations belonging to the authenticated user (supports `?search=`). |
-| `GET` | `/api/history/{session_id}` | Bearer JWT | 60 / min | Retrieve full conversation turn history and analysis payload by ID. |
-| `DELETE`| `/api/history/{session_id}` | Bearer JWT | 30 / min | Delete a conversation and its messages (cascaded). |
-
----
-
-## 8. Environment Variables
-
-All configuration is loaded from `.env` using `python-dotenv`:
-
-| Variable Name | Required | Default Value | Description |
+| Variable Name | Required | Example / Default Value | Purpose |
 | :--- | :---: | :--- | :--- |
-| `PRIMARY_LLM_PROVIDER` | No | `groq` | LiteLLM provider for primary model. |
-| `PRIMARY_LLM_MODEL` | No | `openai/gpt-oss-120b` | Model identifier for primary reasoning. |
-| `PRIMARY_LLM_API_KEY` | **Yes** | — | Primary LLM API key (or `GROQ_API_KEY`). |
-| `PRIMARY_LLM_BASE_URL` | No | `https://api.groq.com/openai/v1` | Base URL for primary LLM endpoint. |
-| `SECONDARY_LLM_PROVIDER` | No | `groq` | LiteLLM provider for secondary fallback model. |
-| `SECONDARY_LLM_MODEL` | No | `qwen/qwen3.8-27b` | Model identifier for secondary fallback model. |
-| `SECONDARY_LLM_API_KEY` | No | — | Optional secondary API key (falls back to primary key if unset). |
-| `SECONDARY_LLM_BASE_URL`| No | `https://api.groq.com/openai/v1` | Base URL for secondary LLM endpoint. |
-| `GOOGLE_MAPS_API_KEY` | **Yes** | — | Google Places API key for text search (`places:searchText`). |
+| `PRIMARY_LLM_PROVIDER` | No | `groq` | Provider identifier for LiteLLM gateway. |
+| `PRIMARY_LLM_MODEL` | No | `openai/gpt-oss-120b` | Model name used for Primary LLM inference. |
+| `PRIMARY_LLM_API_KEY` | **Yes** | `your_primary_llm_api_key` | API key for Primary LLM inference. |
+| `PRIMARY_LLM_BASE_URL` | No | `https://api.groq.com/openai/v1` | Optional API base URL for Primary LLM. |
+| `GOOGLE_MAPS_API_KEY` | **Yes** | `your_google_places_api_key` | Google Maps API key for competitor queries. |
 | `MYSQL_HOST` | No | `localhost` | MySQL host address. |
 | `MYSQL_PORT` | No | `3306` | MySQL connection port. |
-| `MYSQL_USER` | No | `root` | MySQL user. |
-| `MYSQL_PASSWORD` | No | `""` | MySQL user password. |
+| `MYSQL_USER` | No | `root` | Database username. |
+| `MYSQL_PASSWORD` | No | `your_mysql_password` | Database user password. |
 | `MYSQL_DATABASE` | No | `bizadvisor_db` | MySQL database name. |
-| `JWT_SECRET_KEY` | **Yes** | — | Cryptographically random secret of at least 32 characters. |
-| `JWT_ALGORITHM` | No | `HS256` | JWT signing algorithm. |
+| `JWT_SECRET_KEY` | **Yes** | `min_32_characters_random_secret_key` | Secret key used to sign JWT access tokens. |
+| `JWT_ALGORITHM` | No | `HS256` | Cryptographic algorithm for JWTs. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | No | `60` | Token validity duration in minutes. |
-| `JWT_ISSUER` | No | `bizadvisor-api` | Token issuer validation string. |
-| `CORS_ALLOWED_ORIGINS` | No | `http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000` | Comma-separated list of allowed CORS origins. |
+| `JWT_ISSUER` | No | `bizadvisor-api` | JWT token issuer validation string. |
+| `CORS_ALLOWED_ORIGINS` | No | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated list of allowed CORS origins. |
 
 ---
 
-## 9. Project Directory Structure
+## 10. Project Directory Structure
 
 ```
 Business_Analysis_Agent/
@@ -263,6 +270,14 @@ Business_Analysis_Agent/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Analysis/                  # Analytical cards (Location, Performance, etc.)
+│   │   │   │   ├── JudgeCard.jsx          # Final business verdict card
+│   │   │   │   ├── LocationCard.jsx
+│   │   │   │   ├── PerformanceCard.jsx
+│   │   │   │   ├── CompetitionCard.jsx
+│   │   │   │   ├── OpportunityCard.jsx
+│   │   │   │   ├── FinancialCard.jsx
+│   │   │   │   ├── WhatThisMeansCard.jsx
+│   │   │   │   └── AIInsightsPanel.jsx
 │   │   │   ├── AudioPlayer/               # Web Speech API TTS player
 │   │   │   ├── Auth/                      # Authentication modals
 │   │   │   ├── Chat/                      # Message list & input components
@@ -288,8 +303,9 @@ Business_Analysis_Agent/
 │   │   ├── agent.py                       # Root agent registration
 │   │   ├── competition_agent.py           # Competitor analysis agent
 │   │   ├── coordinator_agent.py           # Master coordinator pipeline
-│   │   ├── insights_generator.py          # Structured AI insights & fallback
-│   │   ├── llm_config.py                  # LiteLLM client & provider config
+│   │   ├── insights_generator.py          # Structured AI insights generator
+│   │   ├── judge_agent.py                 # Final business verdict generator
+│   │   ├── llm_config.py                  # Unified Primary LLM configuration
 │   │   ├── location_agent.py              # Location context agent
 │   │   ├── opportunity_agent.py           # Opportunity scoring agent
 │   │   └── performance_agent.py           # ML performance agent
@@ -303,9 +319,10 @@ Business_Analysis_Agent/
 │   ├── auth.py                            # Argon2id password hashing & PyJWT
 │   └── database.py                        # SQLAlchemy MySQL models & session pool
 ├── tests/
+│   ├── test_judge_agent.py                # Judge Agent unit tests (17 tests)
 │   ├── test_financial_accuracy.py         # Financial calculation unit tests (11 tests)
 │   ├── test_mysql_integration.py          # Database CRUD integration tests (4 tests)
-│   ├── test_mysql_regression.py           # Session recovery regression tests (4 tests)
+│   ├── test_mysql_regression.py           # Session recovery regression tests (5 tests)
 │   └── test_security.py                   # Auth, JWT, rate limiting tests (13 tests)
 ├── .env.example                           # Sample environment configuration
 ├── requirements.txt                       # Backend Python dependencies
@@ -315,15 +332,15 @@ Business_Analysis_Agent/
 
 ---
 
-## 10. Installation & Setup
+## 11. Installation & Setup
 
 ### Prerequisites
 - **Python:** 3.11 or higher
 - **Node.js:** 18 or higher (with npm)
 - **MySQL:** 8.0 or higher
 - **API Keys:**
-  - Google Maps API key with the **Places API (New)** enabled.
-  - Groq API key (for primary and secondary LLM inference).
+  - Google Places API key (with the **Places API (New)** enabled).
+  - Primary LLM API key (e.g., Groq API key).
 
 ### 1. Set Up Python Virtual Environment
 ```powershell
@@ -337,7 +354,7 @@ pip install -r requirements.txt
 ```
 
 ### 2. Configure Environment Variables
-Copy `.env.example` to `.env` and fill in your database credentials and API keys:
+Copy `.env.example` to `.env` and fill in your credentials:
 ```powershell
 Copy-Item .env.example .env
 ```
@@ -359,11 +376,11 @@ cd ..
 
 ---
 
-## 11. Running the Application
+## 12. Running the Application
 
 ### Development Mode
 
-Run the backend and frontend in separate terminal windows:
+Run the backend and frontend in separate terminals:
 
 **Terminal 1 — Backend:**
 ```powershell
@@ -391,20 +408,20 @@ uvicorn server:app --host 0.0.0.0 --port 8000
 
 ---
 
-## 12. Testing & Verification
+## 13. Testing & Verification
 
-The test suite contains **33 automated tests** covering financial formulas, authentication security, database cascades, and session concurrency.
-
-Run the test suite with pytest:
+Run the automated test suite with pytest:
 ```powershell
+.\.venv\Scripts\Activate.ps1
 pytest tests/ -v
 ```
 
 ### Test Suite Summary:
+- **`tests/test_judge_agent.py` (17 tests):** Validates all three verdict categories (`Promising`, `Risky`, `Not Recommended`), separation of strengths and risks, API failure handling, missing key safeguards, exclusion of financial simulator inputs, and JSON parsing with markdown fences.
 - **`tests/test_financial_accuracy.py` (11 tests):** Verifies monthly revenue, food costs, operating profit, margins, break-even customer formulas, zero-revenue safety, and invalid input rejection.
-- **`tests/test_security.py` (14 tests):** Verifies Argon2id password hashing, credential validation, JWT token expiration, route protection, cross-user data isolation, rate limiting, and startup secret key validation.
+- **`tests/test_security.py` (13 tests):** Verifies Argon2id password hashing, credential validation, JWT token expiration, route protection, cross-user data isolation, rate limiting, and startup secret key validation.
 - **`tests/test_mysql_integration.py` (4 tests):** Verifies MySQL schema generation, conversation CRUD, cascading deletes, and analysis payload persistence.
-- **`tests/test_mysql_regression.py` (4 tests):** Verifies multi-turn session creation, conversation updates, and recovery from stale session data.
+- **`tests/test_mysql_regression.py` (5 tests):** Verifies multi-turn session creation, conversation updates, boolean parameter extraction, and recovery from stale session data.
 
 ---
 
